@@ -1,0 +1,186 @@
+openapi: 3.0.3
+info:
+  title: API Comparador de Supermercados
+  description: Contratos iniciales para los microservicios del comparador de supermercados.
+  version: 1.0.0
+servers:
+  - url: http://localhost:3000
+    description: Entorno local de desarrollo
+
+paths:
+  /users/register:
+    post:
+      summary: Registro de usuario
+      tags: [Users]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterUserDto'
+      responses:
+        '201':
+          description: Usuario registrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          description: Datos inválidos
+
+  /users/login:
+    post:
+      summary: Autenticación de usuario
+      tags: [Users]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginDto'
+      responses:
+        '200':
+          description: Usuario autenticado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  accessToken:
+                    type: string
+        '401':
+          description: Credenciales inválidas
+
+  /products/search:
+    get:
+      summary: Búsqueda de productos
+      tags: [Products]
+      parameters:
+        - name: query
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Texto de búsqueda
+        - name: category
+          in: query
+          schema:
+            type: string
+          description: Filtro por categoría
+      responses:
+        '200':
+          description: Lista de productos encontrados
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Product'
+
+  /products/{id}:
+    get:
+      summary: Detalle de un producto
+      tags: [Products]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Detalle del producto
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductDetail'
+        '404':
+          description: Producto no encontrado
+
+  /stores:
+    get:
+      summary: Listar supermercados/tiendas registradas
+      tags: [Stores]
+      responses:
+        '200':
+          description: Lista de tiendas
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Store'
+
+  /crawler/refresh:
+    post:
+      summary: Forzar actualización de datos desde los supermercados
+      tags: [Crawler]
+      responses:
+        '202':
+          description: Proceso de crawling iniciado
+
+components:
+  schemas:
+    RegisterUserDto:
+      type: object
+      required: [email, password, name]
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+        password:
+          type: string
+
+    LoginDto:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        email:
+          type: string
+
+    Product:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        price:
+          type: number
+        store:
+          type: string
+
+    ProductDetail:
+      allOf:
+        - $ref: '#/components/schemas/Product'
+        - type: object
+          properties:
+            lastUpdated:
+              type: string
+              format: date-time
+            url:
+              type: string
+              description: Enlace al producto en la tienda
+
+    Store:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        location:
+          type: string
