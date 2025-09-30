@@ -1,1 +1,5 @@
-flask
+fastapi
+uvicorn
+requests
+beautifulsoup4
+prisma
