@@ -1,3 +1,5 @@
+version: "3.8"
+
 services:
   users-service:
     build: ./services/users-service
@@ -8,6 +10,8 @@ services:
       - ./services/users-service:/app
     environment:
       - NODE_ENV=development
+    depends_on:
+      - postgres
 
   crawler-service:
     build: ./services/crawler-service
@@ -16,5 +20,20 @@ services:
       - "3002:3000"
     volumes:
       - ./services/crawler-service:/app
+    depends_on:
+      - postgres
 
-  
+  product-service:
+    build: ./services/product-service
+    container_name: product-service
+    ports:
+      - "3003:3001"
+    volumes:
+      - ./services/product-service:/app
+    environment:
+      - NODE_ENV=development
+    depends_on:
+      - postgres
+
+  volumes:
+  postgres_data:
