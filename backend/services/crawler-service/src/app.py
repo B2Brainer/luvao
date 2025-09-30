@@ -23,7 +23,15 @@ async def refresh_data():
 
     summary = {"olimpica": {"new": 0, "updated": 0}, "d1": {"new": 0, "updated": 0}}
 
-    # Scraping Olímpica
+    # === Scraping Olímpica ===
+    olimpica_store = await db.client.store.upsert(
+        where={"name": "Olimpica"},
+        data={
+            "create": {"name": "Olimpica", "url": "https://www.olimpica.com"},
+            "update": {},
+        },
+    )
+
     olimpica_products = await scrape_olimpica(queries)
     for p in olimpica_products:
         product = await db.client.product.upsert(
@@ -32,17 +40,12 @@ async def refresh_data():
                 "create": {
                     "name": p["name"],
                     "price": p["price"],
-                    "store": {
-                        "connect_or_create": {
-                            "where": {"name": "Olimpica"},
-                            "create": {
-                                "name": "Olimpica",
-                                "url": "https://www.olimpica.com",
-                            },
-                        }
-                    },
+                    "storeId": olimpica_store.id,
                 },
-                "update": {"price": p["price"]},
+                "update": {
+                    "price": p["price"],
+                    "storeId": olimpica_store.id,
+                },
             },
         )
         if product.price == p["price"]:
@@ -50,7 +53,15 @@ async def refresh_data():
         else:
             summary["olimpica"]["new"] += 1
 
-    # Scraping D1
+    # === Scraping D1 ===
+    d1_store = await db.client.store.upsert(
+        where={"name": "D1"},
+        data={
+            "create": {"name": "D1", "url": "https://domicilios.tiendasd1.com"},
+            "update": {},
+        },
+    )
+
     d1_products = await scrape_d1(queries)
     for p in d1_products:
         product = await db.client.product.upsert(
@@ -59,17 +70,12 @@ async def refresh_data():
                 "create": {
                     "name": p["name"],
                     "price": p["price"],
-                    "store": {
-                        "connect_or_create": {
-                            "where": {"name": "D1"},
-                            "create": {
-                                "name": "D1",
-                                "url": "https://domicilios.tiendasd1.com",
-                            },
-                        }
-                    },
+                    "storeId": d1_store.id,
                 },
-                "update": {"price": p["price"]},
+                "update": {
+                    "price": p["price"],
+                    "storeId": d1_store.id,
+                },
             },
         )
         if product.price == p["price"]:
@@ -84,6 +90,7 @@ async def refresh_data():
 async def get_products():
     products = await db.client.product.find_many(include={"store": True})
     return products
+
 
 
 
