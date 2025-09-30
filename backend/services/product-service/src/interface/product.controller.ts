@@ -3,12 +3,24 @@ import { CreateProductDto } from './dto/create-product.dto';
 import { CreateProductUseCase } from '../application/create-product.usecase';
 import { InMemoryProductRepository } from '../infrastructure/persistence/in-memory-product.repository';
 
-@Controller('products')
+@Controller() // Quitamos 'products' para que las rutas raíz funcionen
 export class ProductController {
   private readonly repo = new InMemoryProductRepository();
   private readonly createUseCase = new CreateProductUseCase(this.repo);
 
-  @Post()
+  // Ruta raíz
+  @Get()
+  getHello() {
+    return { message: 'Product Service funcionando correctamente' };
+  }
+
+  // Ruta de productos
+  @Get('products')
+  async findAll() {
+    return this.repo.findAll();
+  }
+
+  @Post('products')
   async create(@Body() dto: CreateProductDto) {
     return this.createUseCase.execute(
       dto.name,
@@ -17,10 +29,5 @@ export class ProductController {
       dto.price,
       dto.storeId
     );
-  }
-
-  @Get()
-  async findAll() {
-    return this.repo.findAll();
   }
 }

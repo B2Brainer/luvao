@@ -1,6 +1,7 @@
 version: "3.8"
 
 services:
+  # 🧍 Servicio de usuarios
   users-service:
     build: ./services/users-service
     container_name: users-service
@@ -10,9 +11,11 @@ services:
       - ./services/users-service:/app
     environment:
       - NODE_ENV=development
+      - DATABASE_URL=postgresql://postgres:12345@market-postgres:5432/users_db?schema=public
     depends_on:
-      - postgres
+      - market-postgres
 
+  # 🤖 Servicio de rastreo de precios
   crawler-service:
     build: ./services/crawler-service
     container_name: crawler-service
@@ -21,8 +24,9 @@ services:
     volumes:
       - ./services/crawler-service:/app
     depends_on:
-      - postgres
+      - market-postgres
 
+  # 📦 Servicio de productos
   product-service:
     build: ./services/product-service
     container_name: product-service
@@ -32,8 +36,36 @@ services:
       - ./services/product-service:/app
     environment:
       - NODE_ENV=development
+      - DATABASE_URL=postgresql://postgres:12345@market-postgres:5432/products_db?schema=public
     depends_on:
-      - postgres
+      - market-postgres
 
-  volumes:
+  # 🏬 Servicio de tiendas
+  store-service:
+    build: ./services/store-service
+    container_name: store-service
+    ports:
+      - "3004:3002"
+    volumes:
+      - ./services/store-service:/app
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://postgres:12345@market-postgres:5432/stores_db?schema=public
+    depends_on:
+      - market-postgres
+
+  # 🐘 Base de datos PostgreSQL compartida
+  market-postgres:
+    image: postgres:15
+    container_name: market-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 12345
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
   postgres_data:
