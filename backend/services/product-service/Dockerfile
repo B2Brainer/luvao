@@ -1,23 +1,25 @@
 # Imagen base con Node
-FROM node:20-alpine
+# 1️⃣ Imagen base con Node.js
+FROM node:20
 
-# Directorio de trabajo dentro del contenedor
+# 2️⃣ Crear directorio de trabajo
 WORKDIR /usr/src/app
 
-# Copiar package.json y package-lock.json primero (para aprovechar cache de Docker)
+# 3️⃣ Copiar package.json e instalar dependencias
 COPY package*.json ./
-
-# Instalar dependencias
 RUN npm install
 
-# Copiar todo el código del proyecto
+# 4️⃣ Copiar el resto del código (incluyendo prisma/)
 COPY . .
 
-# Compilar TypeScript
+# 5️⃣ Generar el cliente Prisma dentro del contenedor
+RUN npx prisma generate
+
+# 6️⃣ Compilar el proyecto NestJS
 RUN npm run build
 
-# Exponer el puerto donde corre NestJS
-EXPOSE 3003
+# 7️⃣ Exponer el puerto del microservicio
+EXPOSE 3001
 
-# Comando de inicio
+# 8️⃣ Comando para iniciar la app
 CMD ["npm", "run", "start:prod"]
