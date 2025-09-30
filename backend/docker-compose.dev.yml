@@ -8,6 +8,10 @@ services:
       - ./services/users-service:/app
     environment:
       - NODE_ENV=development
+      - DATABASE_URL=postgresql://admin:secret@users-db:5432/users_db?schema=public
+    depends_on:
+      - users-db
+
 
   crawler-service:
     build: ./services/crawler-service
@@ -16,5 +20,19 @@ services:
       - "3002:3000"
     volumes:
       - ./services/crawler-service:/app
+  users-db: 
+    image: postgres:16
+    container_name: users-db
+    restart: always
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: users_db
+    volumes:
+      - users_db_data:/var/lib/postgresql/data
 
+  volumes:
+    users_db_data:
   
