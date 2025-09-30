@@ -16,9 +16,10 @@ model Store {
 
 model Product {
   id        String   @id @default(uuid())
-  name      String
+  name      String   @unique
   price     Float
   lastSeen  DateTime @default(now())
   storeId   String
   store     Store @relation(fields: [storeId], references: [id])
 }
+
