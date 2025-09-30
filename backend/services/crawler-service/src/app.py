@@ -1,12 +1,99 @@
-from flask import Flask, request, jsonify
+from fastapi import FastAPI
+from src.infrastructure.db import db
+from src.scrapers.olimpica import scrape_olimpica
+from src.scrapers.d1 import scrape_d1
 
-app = Flask(__name__)
+app = FastAPI(title="Crawler Service")
 
-@app.route("/crawl", methods=["GET"])
-def crawl():
-    q = request.args.get('q', 'none')
-    # mock data: en la práctica aquí iría el scrapper
-    return jsonify([{"store": "demo", "product": q, "price": 1234}])
 
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=3000)
+@app.on_event("startup")
+async def startup():
+    await db.connect()
+
+
+@app.on_event("shutdown")
+async def shutdown():
+    await db.disconnect()
+
+
+@app.post("/crawler/refresh")
+async def refresh_data():
+    # Palabras clave iniciales
+    queries = ["arroz", "huevo", "aceite"]
+
+    summary = {"olimpica": {"new": 0, "updated": 0}, "d1": {"new": 0, "updated": 0}}
+
+    # === Scraping Olímpica ===
+    olimpica_store = await db.client.store.upsert(
+        where={"name": "Olimpica"},
+        data={
+            "create": {"name": "Olimpica", "url": "https://www.olimpica.com"},
+            "update": {},
+        },
+    )
+
+    olimpica_products = await scrape_olimpica(queries)
+    for p in olimpica_products:
+        product = await db.client.product.upsert(
+            where={"name": p["name"]},
+            data={
+                "create": {
+                    "name": p["name"],
+                    "price": p["price"],
+                    "storeId": olimpica_store.id,
+                },
+                "update": {
+                    "price": p["price"],
+                    "storeId": olimpica_store.id,
+                },
+            },
+        )
+        if product.price == p["price"]:
+            summary["olimpica"]["updated"] += 1
+        else:
+            summary["olimpica"]["new"] += 1
+
+    # === Scraping D1 ===
+    d1_store = await db.client.store.upsert(
+        where={"name": "D1"},
+        data={
+            "create": {"name": "D1", "url": "https://domicilios.tiendasd1.com"},
+            "update": {},
+        },
+    )
+
+    d1_products = await scrape_d1(queries)
+    for p in d1_products:
+        product = await db.client.product.upsert(
+            where={"name": p["name"]},
+            data={
+                "create": {
+                    "name": p["name"],
+                    "price": p["price"],
+                    "storeId": d1_store.id,
+                },
+                "update": {
+                    "price": p["price"],
+                    "storeId": d1_store.id,
+                },
+            },
+        )
+        if product.price == p["price"]:
+            summary["d1"]["updated"] += 1
+        else:
+            summary["d1"]["new"] += 1
+
+    return {"status": "ok", "summary": summary}
+
+
+@app.get("/crawler/products")
+async def get_products():
+    products = await db.client.product.find_many(include={"store": True})
+    return products
+
+
+
+
+
+
+
