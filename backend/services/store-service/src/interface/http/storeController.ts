@@ -1,21 +1,18 @@
-import express from "express";
-import { StoreRepositoryPrisma } from "../../infrastructure/repositories/StoreRepositoryPrisma";
+import { Request, Response } from "express";
 import { GetStoresByCategoryUseCase } from "../../application/use_cases/getStoresByCategory";
+import { StoreRepositoryPrisma } from "../../infrastructure/repositories/StoreRepositoryPrisma";
 
-const router = express.Router();
-const repo = new StoreRepositoryPrisma();
-const useCase = new GetStoresByCategoryUseCase(repo);
+const storeRepo = new StoreRepositoryPrisma();
+const getStoresByCategoryUseCase = new GetStoresByCategoryUseCase(storeRepo);
 
-// GET /stores?category=Electrónica
-router.get("/stores", async (req, res) => {
+export const getStoresByCategory = async (req: Request, res: Response) => {
   try {
-    const category = (req.query.category as string) || undefined;
-    const stores = await useCase.execute(category);
-    return res.json({ stores });
-  } catch (err) {
-    console.error(err);
-    return res.status(500).json({ message: "server error" });
-  }
-});
+    const category = req.query.category as string;
 
-export default router;
+    const stores = await getStoresByCategoryUseCase.execute(category);
+    res.json({ stores });
+  } catch (error) {
+    console.error("Error fetching stores:", error);
+    res.status(500).json({ error: "Error fetching stores" });
+  }
+};

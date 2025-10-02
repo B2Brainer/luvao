@@ -8,11 +8,8 @@ generator client {
 }
 
 model Store {
-  id         Int      @id @default(autoincrement())
-  name       String
-  baseUrl    String
-  country    String?
-  isActive   Boolean  @default(true)
-  categories String[]
-  createdAt  DateTime @default(now())
+  id        Int      @id @default(autoincrement())
+  name      String
+  category  String
+  createdAt DateTime @default(now())
 }

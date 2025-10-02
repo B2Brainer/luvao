@@ -1,17 +1,14 @@
-import express from "express";
+import { Request, Response } from "express";
 import axios from "axios";
 import { ProductRepositoryPrisma } from "../../infrastructure/repositories/ProductRepositoryPrisma";
 import { FilterProductsByTypeUseCase } from "../../application/use_cases/filterProductsByType";
 
-const router = express.Router();
 const repo = new ProductRepositoryPrisma();
 const useCase = new FilterProductsByTypeUseCase(repo);
 
 const SERVICE_STORE_URL = process.env.SERVICE_STORE_URL || "http://service-store:3001";
 
-// GET /products/filter?type=Electrónica
-// optional: ?onlyActiveStores=true  -> consulta service-store para obtener stores activas que tengan la categoría
-router.get("/products/filter", async (req, res) => {
+export const getProductsByType = async (req: Request, res: Response) => {
   try {
     const type = (req.query.type as string) || "";
     if (!type) return res.status(400).json({ message: "type query required" });
@@ -33,6 +30,4 @@ router.get("/products/filter", async (req, res) => {
     console.error(err);
     return res.status(500).json({ message: "server error" });
   }
-});
-
-export default router;
+};

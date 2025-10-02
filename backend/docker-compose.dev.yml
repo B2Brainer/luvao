@@ -29,6 +29,7 @@ services:
       - pg_store
     ports:
       - "3001:3001"
+      - "5555:5555"
 
   service-product:
     build: ./services/product-service
@@ -38,6 +39,7 @@ services:
       - pg_product
     ports:
       - "3002:3002"
+      - "5555:5556"
 
 volumes:
   pg_store_data:
