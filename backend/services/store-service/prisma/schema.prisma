@@ -1,10 +1,10 @@
-generator client {
-  provider = "prisma-client-js"
-}
-
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
 }
 
 model Store {
@@ -13,6 +13,6 @@ model Store {
   baseUrl    String
   country    String?
   isActive   Boolean  @default(true)
-  categories Json
+  categories String[]
   createdAt  DateTime @default(now())
 }

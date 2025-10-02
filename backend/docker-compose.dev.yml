@@ -1,71 +1,44 @@
-version: "3.8"
-
 services:
-  # 🧍 Servicio de usuarios
-  users-service:
-    build: ./services/users-service
-    container_name: users-service
-    ports:
-      - "3001:3000"
-    volumes:
-      - ./services/users-service:/app
-    environment:
-      - NODE_ENV=development
-      - DATABASE_URL=postgresql://postgres:12345@market-postgres:5432/users_db?schema=public
-    depends_on:
-      - market-postgres
-
-  # 🤖 Servicio de rastreo de precios
-  crawler-service:
-    build: ./services/crawler-service
-    container_name: crawler-service
-    ports:
-      - "3002:3000"
-    volumes:
-      - ./services/crawler-service:/app
-    depends_on:
-      - market-postgres
-
-  # 📦 Servicio de productos
-  product-service:
-    build: ./services/product-service
-    container_name: product-service
-    ports:
-      - "3003:3001"
-    volumes:
-      - ./services/product-service:/app
-    environment:
-      - NODE_ENV=development
-      - DATABASE_URL=postgresql://postgres:12345@market-postgres:5432/products_db?schema=public
-    depends_on:
-      - market-postgres
-
-  # 🏬 Servicio de tiendas
-  store-service:
-    build: ./services/store-service
-    container_name: store-service
-    ports:
-      - "3004:3002"
-    volumes:
-      - ./services/store-service:/app
-    environment:
-      - NODE_ENV=development
-      - DATABASE_URL=postgresql://postgres:12345@market-postgres:5432/stores_db?schema=public
-    depends_on:
-      - market-postgres
-
-  # 🐘 Base de datos PostgreSQL compartida
-  market-postgres:
+  pg_store:
     image: postgres:15
-    container_name: market-postgres
-    restart: always
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: 12345
-    ports:
-      - "5432:5432"
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: storedb
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - pg_store_data:/var/lib/postgresql/data
+    ports:
+      - "5434:5432"
+
+  pg_product:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: productdb
+    volumes:
+      - pg_product_data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+
+  service-store:
+    build: ./services/store-service
+    env_file:
+      - ./services/store-service/.env
+    depends_on:
+      - pg_store
+    ports:
+      - "3001:3001"
+
+  service-product:
+    build: ./services/product-service
+    env_file:
+      - ./services/product-service/.env
+    depends_on:
+      - pg_product
+    ports:
+      - "3002:3002"
 
 volumes:
-  postgres_data:
+  pg_store_data:
+  pg_product_data:

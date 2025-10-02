@@ -1,26 +1,33 @@
-# 🏗️ Imagen base (Node 20 con npm)
-FROM node:20
+# ---------- Etapa de compilación ----------
+FROM node:18-alpine AS builder
 
-# 📂 Crea el directorio de trabajo dentro del contenedor
-WORKDIR /usr/src/app
+WORKDIR /app
 
-# 📦 Copia los archivos de configuración primero (para aprovechar la caché de Docker)
+# Instalamos OpenSSL (soluciona el warning)
+RUN apk add --no-cache openssl
+
 COPY package*.json ./
-
-# 📥 Instala las dependencias
 RUN npm install
 
-# 📋 Copia el resto del código fuente
 COPY . .
-
-# 🧠 Genera el cliente de Prisma (para que el servicio pueda acceder a la base)
 RUN npx prisma generate
-
-# 🔧 Compila el código TypeScript a JavaScript
 RUN npm run build
 
-# 🌐 Expone el puerto interno del servicio
-EXPOSE 3001
+# ---------- Etapa final ----------
+FROM node:18-alpine
 
-# 🚀 Comando de inicio del contenedor (modo producción)
-CMD ["npm", "run", "start"]
+WORKDIR /app
+
+# Instalamos OpenSSL también aquí 👇
+RUN apk add --no-cache openssl
+
+COPY --from=builder /app/package*.json ./
+RUN npm install --omit=dev
+
+COPY --from=builder /app/node_modules/.prisma /app/node_modules/.prisma
+COPY --from=builder /app/node_modules/@prisma /app/node_modules/@prisma
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/prisma ./prisma
+
+EXPOSE 3002
+CMD ["node", "dist/main.js"]

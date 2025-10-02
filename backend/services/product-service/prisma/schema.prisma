@@ -8,10 +8,10 @@ generator client {
 }
 
 model Product {
-  id          Int     @id @default(autoincrement())
-  name        String
-  description String
-  category    String
-  price       Float
-  storeId     Int
+  id        Int      @id @default(autoincrement())
+  name      String
+  type      String
+  price     Float
+  storeId   Int
+  createdAt DateTime @default(now())
 }

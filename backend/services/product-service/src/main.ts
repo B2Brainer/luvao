@@ -1,10 +1,13 @@
-import { NestFactory } from '@nestjs/core';
-import { AppModule } from './app.module';
+import express from "express";
+import dotenv from "dotenv";
+import productRouter from "./interface/http/productController";
+dotenv.config();
 
+const app = express();
+app.use(express.json());
+app.use(productRouter);
 
-async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
-  await app.listen(3001);
-  console.log('✅ Product Service corriendo en http://localhost:3001');
-}
-bootstrap();
+const PORT = process.env.PORT || 3002;
+app.listen(PORT, () => {
+  console.log(`service-product listening on ${PORT}`);
+});
