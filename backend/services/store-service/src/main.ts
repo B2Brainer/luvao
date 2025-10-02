@@ -1,9 +1,13 @@
-import { NestFactory } from '@nestjs/core';
-import { AppModule } from './app.module';
+import express from "express";
+import dotenv from "dotenv";
+import storeRouter from "./interface/http/storeController";
+dotenv.config();
 
-async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
-  await app.listen(3002);
-  console.log('✅ Store Service corriendo en http://localhost:3002');
-}
-bootstrap();
+const app = express();
+app.use(express.json());
+app.use(storeRouter);
+
+const PORT = process.env.PORT || 3001;
+app.listen(PORT, () => {
+  console.log(`service-store listening on ${PORT}`);
+});

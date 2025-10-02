@@ -1,17 +1,18 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-generator client {
-  provider = "prisma-client-js"
-}
-
 model Store {
-  id        Int      @id @default(autoincrement())
-  name      String
-  address   String
-  city      String
-  website   String
-  createdAt DateTime @default(now())
+  id         Int      @id @default(autoincrement())
+  name       String
+  baseUrl    String
+  country    String?
+  isActive   Boolean  @default(true)
+  categories Json
+  createdAt  DateTime @default(now())
 }
