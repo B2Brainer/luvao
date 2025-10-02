@@ -1,128 +1,153 @@
-
+// =======================
+// Prisma Client generator
+// =======================
 generator client {
   provider = "prisma-client-js"
-  output   = "../generated/prisma"
 }
 
+// =======================
+// Datasource
+// =======================
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id              String   @id @default(uuid())
-  email           String   @unique
-  emailVerified   DateTime?
-  status          UserStatus @default(ACTIVE)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-
-  profile         UserProfile?
-  sessions        Session[]
-  addresses       Address[]
-  preferences     Preference?
-  savedLists      SavedList[]
-  auditLogs       AuditLog[]
+// =======================
+// Enums
+// =======================
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  DELETED
 }
 
-enum UserStatus { ACTIVE SUSPENDED DELETED }
+// =======================
+// Models
+// =======================
+model User {
+  id            String      @id @default(uuid())
+  email         String      @unique
+  emailVerified DateTime?
+  status        UserStatus  @default(ACTIVE)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  profile       UserProfile?
+  credential    Credential? @relation("UserCredential")   // 👈 lado opuesto
+  sessions      Session[]
+  addresses     Address[]
+  preferences   Preference?
+  savedLists    SavedList[]
+  auditLogs     AuditLog[]
+}
 
 model UserProfile {
-  userId        String  @id
-  firstName     String
-  lastName      String
-  phone         String? @unique
-  dateOfBirth   DateTime?
-  // PII separada del core User
-  user          User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String   @id
+  firstName   String
+  lastName    String
+  phone       String?  @unique
+  dateOfBirth DateTime?
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
+
 model Credential {
-  userId        String  @id
+  userId        String   @id
   passwordHash  String?
-  // MFA opcional
-  mfaEnabled    Boolean @default(false)
+  mfaEnabled    Boolean  @default(false)
   mfaSecret     String?
-  passwordSetAt DateTime? 
-  user          User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  passwordSetAt DateTime?
+
+  user          User     @relation("UserCredential", fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Session {
-  id            String   @id @default(uuid())
-  userId        String
-  // Usa tokens HttpOnly (o almacena sólo el hash)
-  refreshTokenHash String  @unique
-  userAgent      String?
-  ip             String?
-  expiresAt      DateTime
-  createdAt      DateTime @default(now())
-  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id               String   @id @default(uuid())
+  userId           String
+  refreshTokenHash String   @unique
+  userAgent        String?
+  ip               String?
+  expiresAt        DateTime
+  createdAt        DateTime @default(now())
+
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 model Address {
-  id            String   @id @default(uuid())
-  userId        String
-  label         String?  // "Casa", "Trabajo"
-  line1         String
-  line2         String?
-  city          String
-  state         String?
-  postalCode    String?
-  country       String
-  isDefault     Boolean  @default(false)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id         String   @id @default(uuid())
+  userId     String
+  label      String?  // "Casa", "Trabajo"
+  line1      String
+  line2      String?
+  city       String
+  state      String?
+  postalCode String?
+  country    String
+  isDefault  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 model Preference {
-  userId        String   @id
-  language      String   @default("es-CO")
-  currency      String   @default("COP")
-  // Filtros que impactan comparaciones/búsquedas
-  dietaryTags   String[] @default([])  // ["sin_gluten","vegano"]
-  favoriteStores String[] @default([])
-  defaultSort   String   @default("price_asc") // o "relevance"
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId         String    @id
+  language       String    @default("es-CO")
+  currency       String    @default("COP")
+  dietaryTags    String[]  @default([])      // ["sin_gluten","vegano"]
+  favoriteStores String[]  @default([])
+  defaultSort    String    @default("price_asc") // o "relevance"
+
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model SavedList {
-  id            String   @id @default(uuid())
-  userId        String
-  name          String   // "Canasta mensual", "Desayunos"
-  isDefault     Boolean  @default(false)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  items         SavedItem[]
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id        String     @id @default(uuid())
+  userId    String
+  name      String                   // "Canasta mensual", "Desayunos"
+  isDefault Boolean    @default(false)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  items     SavedItem[]
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, name]) // un nombre por usuario
+  @@index([userId])
 }
 
 model SavedItem {
-  id            String   @id @default(uuid())
-  savedListId   String
-  productId     String   // ID del catálogo externo
-  storeId       String?  // opcional si el favorito es por tienda
-  note          String?
-  quantity      Int      @default(1)
-  createdAt     DateTime @default(now())
-  savedList     SavedList @relation(fields: [savedListId], references: [id], onDelete: Cascade)
+  id          String    @id @default(uuid())
+  savedListId String
+  productId   String    // ID del catálogo externo
+  storeId     String?   // opcional si el favorito es por tienda
+  note        String?
+  quantity    Int       @default(1)
+  createdAt   DateTime  @default(now())
+
+  savedList   SavedList @relation(fields: [savedListId], references: [id], onDelete: Cascade)
 
   @@index([productId])
   @@index([storeId])
+  @@index([savedListId])
 }
 
-
 model AuditLog {
-  id            String   @id @default(uuid())
-  userId        String
-  action        String   // "LOGIN","PROFILE_UPDATE","CONSENT_UPDATE", etc.
-  metadata      Json?
-  ip            String?
-  userAgent     String?
-  createdAt     DateTime @default(now())
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id        String   @id @default(uuid())
+  userId    String
+  action    String   // "LOGIN","PROFILE_UPDATE","CONSENT_UPDATE", etc.
+  metadata  Json?
+  ip        String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, action, createdAt])
 }
