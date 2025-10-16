@@ -8,10 +8,10 @@ const app = express();
 app.use(express.json());
 
 // ruta base
-app.get("/", (req, res) => res.send("✅ Service Product is running correctly!"));
+app.get("/", (req, res) => res.send("Service Product is running correctly!"));
 
-// 👇 rutas reales
+//  rutas reales
 app.use("/products", ProductRouter);
 
 const port = process.env.PORT || 3002;
-app.listen(port, () => console.log(`✅ service-product listening on port ${port}`));
+app.listen(port, () => console.log(`service-product listening on port ${port}`));

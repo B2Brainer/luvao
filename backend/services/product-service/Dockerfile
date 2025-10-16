@@ -18,7 +18,7 @@ FROM node:18-alpine
 
 WORKDIR /app
 
-# Instalamos OpenSSL también aquí 👇
+# Instalamos OpenSSL también aquí 
 RUN apk add --no-cache openssl
 
 COPY --from=builder /app/package*.json ./
