@@ -3,29 +3,34 @@ FROM node:18-alpine AS builder
 
 WORKDIR /app
 
-# Instalamos OpenSSL (soluciona el warning)
+# Instalamos dependencias del sistema necesarias
 RUN apk add --no-cache openssl
 
+# Copiamos los archivos de dependencias
 COPY package*.json ./
+
+# Instalamos todas las dependencias (incluyendo dev)
 RUN npm install
 
+# Copiamos el resto del código fuente
 COPY . .
-RUN npx prisma generate
-RUN npm run build
+
+# Generamos Prisma
+RUN npx prisma generate --schema=./prisma/schema.prisma
+
+# ✅ Compilamos usando npx (garantizado que funciona)
+RUN npx tsc
 
 # ---------- Etapa final ----------
 FROM node:18-alpine
 
 WORKDIR /app
 
-# Instalamos OpenSSL también aquí 
 RUN apk add --no-cache openssl
 
 COPY --from=builder /app/package*.json ./
 RUN npm install --omit=dev
 
-COPY --from=builder /app/node_modules/.prisma /app/node_modules/.prisma
-COPY --from=builder /app/node_modules/@prisma /app/node_modules/@prisma
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/prisma ./prisma
 

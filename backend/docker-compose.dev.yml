@@ -31,6 +31,8 @@ services:
     ports:
       - "3002:3002"
     command: sh -c "npm run build && npm start"
+    networks:
+      - backend-net
 
   store-service:
     build: ./services/store-service
@@ -41,7 +43,13 @@ services:
     ports:
       - "3001:3001"
     command: sh -c "npm run build && npm start"
+    networks:
+      - backend-net
 
 volumes:
   pg_product_data:
   pg_store_data:
+
+networks:
+  backend-net:
+    driver: bridge
