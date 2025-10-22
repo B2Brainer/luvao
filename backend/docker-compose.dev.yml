@@ -1,37 +1,28 @@
+version: "3.9"
 services:
-  pg_store:
-    image: postgres:15
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: storedb
-    volumes:
-      - pg_store_data:/var/lib/postgresql/data
-    ports:
-      - "5434:5432"
-
   pg_product:
     image: postgres:15
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: productdb
-    volumes:
-      - pg_product_data:/var/lib/postgresql/data
     ports:
       - "5433:5432"
+    volumes:
+      - pg_product_data:/var/lib/postgresql/data
 
-  service-store:
-    build: ./services/store-service
-    env_file:
-      - ./services/store-service/.env
-    depends_on:
-      - pg_store
+  pg_store:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: storedb
     ports:
-      - "3001:3001"
-      - "5555:5555"
+      - "5434:5432"
+    volumes:
+      - pg_store_data:/var/lib/postgresql/data
 
-  service-product:
+  product-service:
     build: ./services/product-service
     env_file:
       - ./services/product-service/.env
@@ -39,8 +30,18 @@ services:
       - pg_product
     ports:
       - "3002:3002"
-      - "5555:5556"
+    command: sh -c "npm run build && npm start"
+
+  store-service:
+    build: ./services/store-service
+    env_file:
+      - ./services/store-service/.env
+    depends_on:
+      - pg_store
+    ports:
+      - "3001:3001"
+    command: sh -c "npm run build && npm start"
 
 volumes:
-  pg_store_data:
   pg_product_data:
+  pg_store_data:

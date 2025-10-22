@@ -1,0 +1,141 @@
+openapi: 3.0.3
+info:
+  title: Store Service API
+  description: API para la gestión de tiendas del comparador de supermercados.
+  version: 1.0.0
+servers:
+  - url: http://localhost:3001/api
+    description: Local development server
+
+tags:
+  - name: Stores
+    description: Operaciones sobre tiendas
+
+paths:
+  /stores:
+    get:
+      tags:
+        - Stores
+      summary: Obtener todas las tiendas
+      responses:
+        '200':
+          description: Lista de tiendas
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Store'
+    post:
+      tags:
+        - Stores
+      summary: Crear una nueva tienda
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StoreCreate'
+      responses:
+        '201':
+          description: Tienda creada exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Store'
+
+  /stores/{id}:
+    get:
+      tags:
+        - Stores
+      summary: Obtener tienda por ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Tienda encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Store'
+        '404':
+          description: Tienda no encontrada
+    put:
+      tags:
+        - Stores
+      summary: Actualizar una tienda por ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StoreUpdate'
+      responses:
+        '200':
+          description: Tienda actualizada correctamente
+    delete:
+      tags:
+        - Stores
+      summary: Eliminar una tienda por ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Tienda eliminada correctamente
+
+components:
+  schemas:
+    Store:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: Éxito Buenavista
+        city:
+          type: string
+          example: Barranquilla
+        address:
+          type: string
+          example: Calle 98 #52-115
+    StoreCreate:
+      type: object
+      required: [name, city, address]
+      properties:
+        name:
+          type: string
+          example: Olímpica Prado
+        city:
+          type: string
+          example: Barranquilla
+        address:
+          type: string
+          example: Carrera 53 #79-230
+    StoreUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          example: Olímpica Prado Centro
+        city:
+          type: string
+          example: Barranquilla
+        address:
+          type: string
+          example: Carrera 54 #78-221

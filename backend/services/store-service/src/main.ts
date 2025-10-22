@@ -1,19 +1,27 @@
-import express from "express";
-import dotenv from "dotenv";
-import { StoreRouter } from "./interface/http/storeRouter";
+import express from 'express';
+import cors from 'cors';
+import dotenv from 'dotenv';
+const YAML: any = require('yamljs');
+import swaggerUi from 'swagger-ui-express';
+import { StoreRouter } from './interface/http/storeRouter';
 
 dotenv.config();
+const PORT = process.env.PORT ? Number(process.env.PORT) : 3001;
 
 const app = express();
+app.use(cors());
 app.use(express.json());
 
-// Ruta de prueba para ver que el servicio esté activo
-app.get("/", (req, res) => {
-  res.send("✅ Service Store is running correctly!");
+// Swagger para store-service
+const swaggerDoc = YAML.load(__dirname + '/../../docs/openapi-store.yaml');
+app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerDoc));
+
+// Healthcheck
+app.get('/health', (_req, res) => res.json({ status: 'ok', service: 'store-service' }));
+
+app.use('/api/stores', StoreRouter);
+
+app.listen(PORT, () => {
+  console.log(`store-service listening on port ${PORT}`);
+  console.log(`Swagger UI: http://localhost:${PORT}/docs`);
 });
-
-// Rutas principales
-app.use("/stores", StoreRouter);
-
-const port = process.env.PORT || 3001;
-app.listen(port, () => console.log(`✅ service-store listening on port ${port}`));
