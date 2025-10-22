@@ -22,8 +22,11 @@ RUN apk add --no-cache openssl
 COPY --from=builder /app/package*.json ./
 RUN npm install --omit=dev
 
-COPY --from=builder /app/dist ./dist
+# SOLUCIÓN: Generar el cliente de Prisma en la etapa final
 COPY --from=builder /app/prisma ./prisma
+RUN npx prisma generate --schema=./prisma/schema.prisma
+
+COPY --from=builder /app/dist ./dist
 
 EXPOSE 3002
 CMD ["node", "dist/main.js"]

@@ -30,7 +30,8 @@ services:
       - pg_product
     ports:
       - "3002:3002"
-    command: sh -c "npm run build && npm start"
+    # SOLUCIÓN: Solo ejecutar start, el build ya se hizo en el Dockerfile
+    command: npm start
     networks:
       - backend-net
 
@@ -42,7 +43,8 @@ services:
       - pg_store
     ports:
       - "3001:3001"
-    command: sh -c "npm run build && npm start"
+    #  SOLUCIÓN: Solo ejecutar start, el build ya se hizo en el Dockerfile
+    command: npm start
     networks:
       - backend-net
 
