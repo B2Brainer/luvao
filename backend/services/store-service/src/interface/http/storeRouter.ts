@@ -1,10 +1,9 @@
 import { Router } from "express";
 import { getStoresByCategory } from "./storeController";
 
+console.log("getStoresByCategory type:", typeof getStoresByCategory);
+
 export const StoreRouter = Router();
 
-// Ruta base
 StoreRouter.get("/", getStoresByCategory);
-
-// Ruta con filtro explícito (es lo mismo, solo alias)
 StoreRouter.get("/filter", getStoresByCategory);
