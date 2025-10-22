@@ -7,15 +7,12 @@ const common_1 = require("@nestjs/common"); // 👈 importa el ValidationPipe
 require("reflect-metadata");
 async function bootstrap() {
     const app = await core_1.NestFactory.create(app_module_1.AppModule);
-    // habilita validaciones de DTOs con class-validator
     app.useGlobalPipes(new common_1.ValidationPipe({
-        whitelist: true, // elimina propiedades no definidas en DTO
-        forbidNonWhitelisted: true, // lanza error si llegan propiedades extra
-        transform: true, // transforma payloads a instancias de DTO
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        transform: true,
     }));
-    // lee puerto desde .env o usa 3000 por defecto
     const port = process.env.PORT || 3000;
-    // Configuración de Swagger
     const config = new swagger_1.DocumentBuilder()
         .setTitle('Users Service API')
         .setDescription('Documentación de la API para el microservicio de usuarios')

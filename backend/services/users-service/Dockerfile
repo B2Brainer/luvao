@@ -1,30 +1,25 @@
 
-# ---------- deps ----------
-FROM node:18-alpine AS deps
+FROM node:20-alpine AS deps
 WORKDIR /app
 COPY package*.json ./
-# instala EXACTAMENTE lo del lockfile y con dev deps
-RUN npm ci
-
-# ---------- builder ----------
-FROM deps AS builder
+COPY package-lock.json ./
+RUN apk add --no-cache python3 make g++
+RUN npm ci --ignore-scripts
+FROM node:20-alpine AS builder
 WORKDIR /app
 COPY . .
-# si usas prisma client, generarlo en build
-RUN npx prisma generate || true
+COPY --from=deps /app/node_modules ./node_modules
+RUN npx prisma generate --schema=src/prisma/schema.prisma || true
 RUN npm run build
-
-# ---------- runner ----------
-FROM node:18-alpine AS runner
+FROM node:20-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
-# solo deps de producción para imagen liviana
-COPY --from=builder /app/package*.json ./
-RUN npm ci --omit=dev
-# artefactos
+COPY package*.json ./
+COPY package-lock.json ./
+RUN npm ci --omit=dev --ignore-scripts
 COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/prisma ./prisma
+
 COPY ./.env ./.env
+
 EXPOSE 3000
-# en runtime NO uses nest cli; arranca el JS compilado
 CMD ["node", "dist/main.js"]
