@@ -5,10 +5,12 @@ WORKDIR /app
 
 RUN apk add --no-cache openssl
 
-COPY package*.json ./
+# Copiar package.json del servicio
+COPY services/store-service/package*.json ./
 RUN npm install
 
-COPY . .
+# Copiar el código fuente del servicio
+COPY services/store-service/ .
 
 RUN npx prisma generate --schema=./prisma/schema.prisma
 RUN npx tsc
@@ -22,11 +24,13 @@ RUN apk add --no-cache openssl
 COPY --from=builder /app/package*.json ./
 RUN npm install --omit=dev
 
-# SOLUCIÓN: Generar el cliente de Prisma en la etapa final
 COPY --from=builder /app/prisma ./prisma
 RUN npx prisma generate --schema=./prisma/schema.prisma
 
 COPY --from=builder /app/dist ./dist
+
+# ← NUEVO: Copiar los archivos OpenAPI desde el contexto raíz
+COPY docs /app/docs
 
 EXPOSE 3001
 CMD ["node", "dist/main.js"]

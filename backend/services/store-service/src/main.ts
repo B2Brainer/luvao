@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import path from 'path';
 const YAML: any = require('yamljs');
 import swaggerUi from 'swagger-ui-express';
 import { StoreRouter } from './interface/http/storeRouter';
@@ -12,8 +13,10 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Swagger para store-service
-const swaggerDoc = YAML.load(__dirname + '/../../docs/openapi-store.yaml');
+// Swagger para store-service - Ruta absoluta desde /app
+const swaggerPath = path.join('/app', 'docs', 'openapi-store.yaml');
+console.log('Loading Swagger from:', swaggerPath);
+const swaggerDoc = YAML.load(swaggerPath);
 app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerDoc));
 
 // Healthcheck

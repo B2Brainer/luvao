@@ -21,29 +21,32 @@ services:
       - "5434:5432"
     volumes:
       - pg_store_data:/var/lib/postgresql/data
+      
 
   product-service:
-    build: ./services/product-service
+    build:
+      context: .
+      dockerfile: ./services/product-service/Dockerfile
     env_file:
       - ./services/product-service/.env
     depends_on:
       - pg_product
     ports:
       - "3002:3002"
-    # SOLUCIÓN: Solo ejecutar start, el build ya se hizo en el Dockerfile
     command: npm start
     networks:
       - backend-net
 
   store-service:
-    build: ./services/store-service
+    build:
+      context: .
+      dockerfile: ./services/store-service/Dockerfile
     env_file:
       - ./services/store-service/.env
     depends_on:
       - pg_store
     ports:
       - "3001:3001"
-    #  SOLUCIÓN: Solo ejecutar start, el build ya se hizo en el Dockerfile
     command: npm start
     networks:
       - backend-net

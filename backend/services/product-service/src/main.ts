@@ -4,6 +4,7 @@ import YAML from 'yamljs';
 import swaggerUi from 'swagger-ui-express';
 import dotenv from 'dotenv';
 import { ProductRouter } from './interface/http/productRouter';
+import path from 'path'; // ← Añadir esta importación
 
 dotenv.config();
 const PORT = process.env.PORT ? Number(process.env.PORT) : 3002;
@@ -13,8 +14,10 @@ async function bootstrap() {
   app.use(cors());
   app.use(express.json());
 
-  // Swagger para product-service
-  const swaggerDoc = YAML.load(__dirname + '/../../docs/openapi-product.yaml');
+  // Swagger para product-service - CORREGIDO
+  const swaggerPath = path.join('/app', 'docs', 'openapi-product.yaml');
+  console.log('Loading Swagger from:', swaggerPath);
+  const swaggerDoc = YAML.load(swaggerPath);
   app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerDoc));
 
   // Healthcheck
