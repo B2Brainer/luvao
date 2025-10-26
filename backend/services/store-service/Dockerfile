@@ -5,15 +5,20 @@ WORKDIR /app
 
 RUN apk add --no-cache openssl
 
-# Copiar package.json del servicio
+# Copiar archivos de dependencias
 COPY services/store-service/package*.json ./
+
+# Instalar dependencias completas (incluye TypeScript)
 RUN npm install
 
 # Copiar el código fuente del servicio
 COPY services/store-service/ .
 
+# Generar Prisma Client
 RUN npx prisma generate --schema=./prisma/schema.prisma
-RUN npx tsc
+
+# Compilar TypeScript usando el script del package.json
+RUN npm run build
 
 # ---------- Etapa final ----------
 FROM node:18-alpine
@@ -21,15 +26,16 @@ FROM node:18-alpine
 WORKDIR /app
 RUN apk add --no-cache openssl
 
+# Copiar los archivos necesarios desde el builder
 COPY --from=builder /app/package*.json ./
-RUN npm install --omit=dev
-
+COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/prisma ./prisma
-RUN npx prisma generate --schema=./prisma/schema.prisma
-
 COPY --from=builder /app/dist ./dist
 
-# ← NUEVO: Copiar los archivos OpenAPI desde el contexto raíz
+# Generar Prisma Client (opcional si ya fue generado arriba)
+RUN npx prisma generate --schema=./prisma/schema.prisma
+
+# Copiar los archivos OpenAPI
 COPY docs /app/docs
 
 EXPOSE 3001
