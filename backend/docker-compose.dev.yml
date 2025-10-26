@@ -51,6 +51,13 @@ services:
     networks:
       - backend-net
 
+  crawler-service:
+    build: ./services/crawler-service
+    container_name: crawler-service
+    ports:
+      - "3002:3000"
+    volumes:
+      - ./services/crawler-service:/app
 volumes:
   pg_product_data:
   pg_store_data:
