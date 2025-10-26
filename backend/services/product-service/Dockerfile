@@ -5,21 +5,21 @@ WORKDIR /app
 
 RUN apk add --no-cache openssl
 
-# Copiar package.json y lock
+# Copiar package.json del servicio
 COPY services/product-service/package*.json ./
 
-# Instalar TODAS las dependencias (incluyendo las dev)
+# Instalar todas las dependencias (incluyendo devDependencies)
 RUN npm install
 
-# Copiar el código fuente
+# Instalar TypeScript globalmente para asegurar que tsc esté disponible
+RUN npm install -g typescript
+
+# Copiar el código fuente del servicio
 COPY services/product-service/ .
 
-# Generar Prisma Client
 RUN npx prisma generate --schema=./prisma/schema.prisma
-
-# Compilar TypeScript
 RUN npx tsc
-# ---------- Etapa final ----------
+
 # ---------- Etapa final ----------
 FROM node:18-alpine
 
@@ -33,6 +33,7 @@ COPY --from=builder /app/prisma ./prisma
 RUN npx prisma generate --schema=./prisma/schema.prisma
 
 COPY --from=builder /app/dist ./dist
+
 COPY docs /app/docs
 
 EXPOSE 3002

@@ -7,7 +7,12 @@ RUN apk add --no-cache openssl
 
 # Copiar package.json del servicio
 COPY services/store-service/package*.json ./
+
+# Instalar todas las dependencias (incluyendo devDependencies)
 RUN npm install
+
+# Instalar TypeScript globalmente para asegurar que tsc esté disponible
+RUN npm install -g typescript
 
 # Copiar el código fuente del servicio
 COPY services/store-service/ .
@@ -29,8 +34,7 @@ RUN npx prisma generate --schema=./prisma/schema.prisma
 
 COPY --from=builder /app/dist ./dist
 
-# ← NUEVO: Copiar los archivos OpenAPI desde el contexto raíz
 COPY docs /app/docs
 
-EXPOSE 3001
+EXPOSE 3002
 CMD ["node", "dist/main.js"]
