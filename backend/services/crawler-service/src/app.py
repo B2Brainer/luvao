@@ -1,7 +1,8 @@
 from fastapi import FastAPI
 from src.infrastructure.db import db
 from src.scrapers.olimpica import scrape_olimpica
-from src.scrapers.d1 import scrape_d1
+from src.scrapers.exito import scrape_exito
+
 
 app = FastAPI(title="Crawler Service")
 
@@ -21,7 +22,10 @@ async def refresh_data():
     # Palabras clave iniciales
     queries = ["arroz", "huevo", "aceite"]
 
-    summary = {"olimpica": {"new": 0, "updated": 0}, "d1": {"new": 0, "updated": 0}}
+    summary = {
+        "olimpica": {"new": 0, "updated": 0},
+        "exito": {"new": 0, "updated": 0},
+    }
 
     # === Scraping Olímpica ===
     olimpica_store = await db.client.store.upsert(
@@ -53,35 +57,35 @@ async def refresh_data():
         else:
             summary["olimpica"]["new"] += 1
 
-    # === Scraping D1 ===
-    d1_store = await db.client.store.upsert(
-        where={"name": "D1"},
+    # === Scraping Éxito ===
+    exito_store = await db.client.store.upsert(
+        where={"name": "Éxito"},
         data={
-            "create": {"name": "D1", "url": "https://domicilios.tiendasd1.com"},
+            "create": {"name": "Éxito", "url": "https://www.exito.com"},
             "update": {},
         },
     )
 
-    d1_products = await scrape_d1(queries)
-    for p in d1_products:
+    exito_products = await scrape_exito(queries)
+    for p in exito_products:
         product = await db.client.product.upsert(
             where={"name": p["name"]},
             data={
                 "create": {
                     "name": p["name"],
                     "price": p["price"],
-                    "storeId": d1_store.id,
+                    "storeId": exito_store.id,
                 },
                 "update": {
                     "price": p["price"],
-                    "storeId": d1_store.id,
+                    "storeId": exito_store.id,
                 },
             },
         )
         if product.price == p["price"]:
-            summary["d1"]["updated"] += 1
+            summary["exito"]["updated"] += 1
         else:
-            summary["d1"]["new"] += 1
+            summary["exito"]["new"] += 1
 
     return {"status": "ok", "summary": summary}
 
@@ -90,6 +94,7 @@ async def refresh_data():
 async def get_products():
     products = await db.client.product.find_many(include={"store": True})
     return products
+
 
 
 
