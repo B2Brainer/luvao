@@ -6,7 +6,13 @@ import { FilterProductsByTypeUseCase } from "../../application/use_cases/filterP
 const repo = new ProductRepositoryPrisma();
 const useCase = new FilterProductsByTypeUseCase(repo);
 
+// URL del servicio de tiendas (usado internamente en Docker Compose)
 const SERVICE_STORE_URL = process.env.SERVICE_STORE_URL || "http://service-store:3001";
+
+// ✅ Interfaz para tipar la respuesta del store-service
+interface StoreResponse {
+  stores?: { id: number; name: string; isActive?: boolean }[];
+}
 
 export const getProductsByType = async (req: Request, res: Response) => {
   try {
@@ -16,18 +22,47 @@ export const getProductsByType = async (req: Request, res: Response) => {
     const onlyActiveStores = (req.query.onlyActiveStores as string) === "true";
 
     if (onlyActiveStores) {
-      // pedir a service-store las tiendas que tengan la categoría = type
-      const resp = await axios.get(`${SERVICE_STORE_URL}/stores`, { params: { category: type } });
+      // ✅ Tipado de Axios para evitar 'unknown'
+      const resp = await axios.get<StoreResponse>(`${SERVICE_STORE_URL}/stores`, {
+        params: { category: type },
+      });
+
       const stores = resp.data.stores || [];
-      const storeIds: number[] = stores.map((s: any) => s.id);
+      const storeIds: number[] = stores.map((s) => s.id);
+
       const products = await useCase.execute(type, storeIds);
-      return res.json({ products });
+      return res.json({
+        count: products.length,
+        products,
+      });
     } else {
       const products = await useCase.execute(type);
-      return res.json({ products });
+      return res.json({
+        count: products.length,
+        products,
+      });
     }
   } catch (err) {
-    console.error(err);
+    console.error("Error in getProductsByType:", err);
     return res.status(500).json({ message: "server error" });
   }
 };
+
+export const createProducts = async (req: Request, res: Response) => {
+  try {
+    const products = req.body;
+    if (!Array.isArray(products) || products.length === 0) {
+      return res.status(400).json({ message: "Products array required" });
+    }
+
+    const result = await repo.createMany(products);
+    return res.status(201).json({
+      message: "Products created successfully",
+      count: result.count,
+    });
+  } catch (err) {
+    console.error("Error creating products:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+

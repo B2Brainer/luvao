@@ -85,6 +85,8 @@ services:
       - ./services/crawler-service:/app
     environment:
       DATABASE_URL: postgresql://postgres:postgres@pg_crawler:5432/crawlerdb
+      STORE_SERVICE_URL: http://store-service:3001
+      PRODUCT_SERVICE_URL: http://product-service:3002
     command: >
       sh -c "prisma migrate deploy &&
          export PYTHONPATH=/app &&
