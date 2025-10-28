@@ -6,9 +6,9 @@ from src.scrapers.exito import scrape_exito
 
 app = FastAPI(title="Crawler Service")
 
-# ✅ URLs internas de los otros microservicios (usadas dentro de Docker Compose)
-STORE_SERVICE_URL = os.getenv("STORE_SERVICE_URL", "http://store-service:3001")
-PRODUCT_SERVICE_URL = os.getenv("PRODUCT_SERVICE_URL", "http://product-service:3002")
+# ✅ URLs internas de los microservicios (usadas dentro del Docker Compose)
+STORE_SERVICE_URL = "http://store-service:3001/api/stores"
+PRODUCT_SERVICE_URL = "http://product-service:3002/api/products"
 
 
 @app.post("/crawler/refresh")
@@ -33,7 +33,7 @@ async def refresh_data():
             "categories": queries,
             "country": "CO",
         }
-        await client.post(f"{STORE_SERVICE_URL}/stores", json=store_payload)
+        await client.post(STORE_SERVICE_URL, json=store_payload)
 
         # Enviar productos al product-service
         olimpica_payload = [
@@ -46,7 +46,8 @@ async def refresh_data():
             for p in olimpica_products
         ]
         if olimpica_payload:
-            await client.post(f"{PRODUCT_SERVICE_URL}/products", json=olimpica_payload)
+            # ✅ Ruta corregida (sin duplicar /api/products)
+            await client.post(PRODUCT_SERVICE_URL, json=olimpica_payload)
             summary["olimpica"]["sent"] = len(olimpica_payload)
 
         # === Scraping Éxito ===
@@ -60,7 +61,7 @@ async def refresh_data():
             "categories": queries,
             "country": "CO",
         }
-        await client.post(f"{STORE_SERVICE_URL}/stores", json=store_payload)
+        await client.post(STORE_SERVICE_URL, json=store_payload)
 
         # Enviar productos al product-service
         exito_payload = [
@@ -73,7 +74,8 @@ async def refresh_data():
             for p in exito_products
         ]
         if exito_payload:
-            await client.post(f"{PRODUCT_SERVICE_URL}/products", json=exito_payload)
+            # ✅ Ruta corregida
+            await client.post(PRODUCT_SERVICE_URL, json=exito_payload)
             summary["exito"]["sent"] = len(exito_payload)
 
     return {"status": "ok", "summary": summary}
@@ -84,14 +86,16 @@ async def test_connection():
     """Permite verificar la conexión con los otros servicios."""
     async with httpx.AsyncClient(timeout=10.0) as client:
         try:
-            store_resp = await client.get(f"{STORE_SERVICE_URL}/stores")
-            product_resp = await client.get(f"{PRODUCT_SERVICE_URL}/products/filter?type=test")
+            # ✅ Corregido: no agregar /stores ni /products extra
+            store_resp = await client.get(STORE_SERVICE_URL)
+            product_resp = await client.get(f"{PRODUCT_SERVICE_URL}/filter?type=test")
             return {
                 "store_service": store_resp.status_code,
                 "product_service": product_resp.status_code,
             }
         except Exception as e:
             return {"error": str(e)}
+
 
 
 
