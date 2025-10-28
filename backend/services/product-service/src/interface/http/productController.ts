@@ -66,3 +66,17 @@ export const createProducts = async (req: Request, res: Response) => {
   }
 };
 
+export const getAllProducts = async (_req: Request, res: Response) => {
+  try {
+    const products = await repo.getAll();
+    return res.json({
+      count: products.length,
+      products,
+    });
+  } catch (err) {
+    console.error("Error fetching products:", err);
+    return res.status(500).json({ message: "server error" });
+  }
+};
+
+
