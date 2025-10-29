@@ -1,15 +1,19 @@
 import { Module } from '@nestjs/common';
 import { UserController } from './interface/user.controller';
+import { ProfileController } from './interface/profile.controller';
 import { CreateUserUseCase } from './application/create-user.usecase';
-import { InMemoryUserRepository } from './infrastructure/persistence/in-memory-user.repository';
+import { UpsertProfileUseCase } from './application/upsert-profile.usecase';
+import { PrismaModule } from './prisma/prisma.module';
+import { PrismaUserRepository } from './infrastructure/persistence/prisma-user.repository';
 
 @Module({
-  imports: [],
-  controllers: [UserController],
+  imports: [PrismaModule],
+  controllers: [UserController, ProfileController],
   providers: [
     CreateUserUseCase,
-    { provide: 'UserRepository', useClass: InMemoryUserRepository },
-    InMemoryUserRepository,
+    UpsertProfileUseCase,
+    PrismaUserRepository,
+    { provide: 'UserRepository', useExisting: PrismaUserRepository },
   ],
 })
 export class AppModule {}

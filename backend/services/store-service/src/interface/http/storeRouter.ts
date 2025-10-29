@@ -1,0 +1,12 @@
+import { Router } from "express";
+import { getStoresByCategory, createStore} from "./storeController";
+
+
+console.log("getStoresByCategory type:", typeof getStoresByCategory);
+
+export const StoreRouter = Router();
+
+StoreRouter.get("/", getStoresByCategory);
+StoreRouter.get("/filter", getStoresByCategory);
+
+StoreRouter.post("/", createStore);

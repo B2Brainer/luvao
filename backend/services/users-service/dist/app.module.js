@@ -10,18 +10,19 @@ exports.AppModule = void 0;
 const common_1 = require("@nestjs/common");
 const user_controller_1 = require("./interface/user.controller");
 const create_user_usecase_1 = require("./application/create-user.usecase");
-const in_memory_user_repository_1 = require("./infrastructure/persistence/in-memory-user.repository");
+const prisma_module_1 = require("./prisma/prisma.module");
+const prisma_user_repository_1 = require("./infrastructure/persistence/prisma-user.repository");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
 exports.AppModule = AppModule = __decorate([
     (0, common_1.Module)({
-        imports: [],
+        imports: [prisma_module_1.PrismaModule],
         controllers: [user_controller_1.UserController],
         providers: [
             create_user_usecase_1.CreateUserUseCase,
-            { provide: 'UserRepository', useClass: in_memory_user_repository_1.InMemoryUserRepository },
-            in_memory_user_repository_1.InMemoryUserRepository,
+            prisma_user_repository_1.PrismaUserRepository,
+            { provide: 'UserRepository', useExisting: prisma_user_repository_1.PrismaUserRepository },
         ],
     })
 ], AppModule);
