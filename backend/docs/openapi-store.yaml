@@ -26,23 +26,6 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Store'
-    post:
-      tags:
-        - Stores
-      summary: Crear una nueva tienda
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/StoreCreate'
-      responses:
-        '201':
-          description: Tienda creada exitosamente
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Store'
 
   /api/stores/{id}:
     get:
@@ -64,38 +47,6 @@ paths:
                 $ref: '#/components/schemas/Store'
         '404':
           description: Tienda no encontrada
-    put:
-      tags:
-        - Stores
-      summary: Actualizar una tienda por ID
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/StoreUpdate'
-      responses:
-        '200':
-          description: Tienda actualizada correctamente
-    delete:
-      tags:
-        - Stores
-      summary: Eliminar una tienda por ID
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-      responses:
-        '204':
-          description: Tienda eliminada correctamente
 
 components:
   schemas:

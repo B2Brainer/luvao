@@ -48,24 +48,6 @@ export const getProductsByType = async (req: Request, res: Response) => {
   }
 };
 
-export const createProducts = async (req: Request, res: Response) => {
-  try {
-    const products = req.body;
-    if (!Array.isArray(products) || products.length === 0) {
-      return res.status(400).json({ message: "Products array required" });
-    }
-
-    const result = await repo.createMany(products);
-    return res.status(201).json({
-      message: "Products created successfully",
-      count: result.count,
-    });
-  } catch (err) {
-    console.error("Error creating products:", err);
-    return res.status(500).json({ message: "Server error" });
-  }
-};
-
 export const getAllProducts = async (_req: Request, res: Response) => {
   try {
     const products = await repo.getAll();

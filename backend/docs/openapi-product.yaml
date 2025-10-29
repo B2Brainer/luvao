@@ -26,23 +26,6 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Product'
-    post:
-      tags:
-        - Products
-      summary: Crear un nuevo producto
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ProductCreate'
-      responses:
-        '201':
-          description: Producto creado exitosamente
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Product'
 
   /api/products/filter:
     get:
@@ -86,38 +69,6 @@ paths:
                 $ref: '#/components/schemas/Product'
         '404':
           description: Producto no encontrado
-    put:
-      tags:
-        - Products
-      summary: Actualizar un producto por ID
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ProductUpdate'
-      responses:
-        '200':
-          description: Producto actualizado correctamente
-    delete:
-      tags:
-        - Products
-      summary: Eliminar un producto por ID
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-      responses:
-        '204':
-          description: Producto eliminado correctamente
 
 components:
   schemas:

@@ -16,14 +16,4 @@ export const getStoresByCategory = async (req: Request, res: Response) => {
   }
 };
 
-export const createStore = async (req: Request, res: Response) => {
-  try {
-    const { name, baseUrl, country, categories } = req.body;
-if (!baseUrl) return res.status(400).json({ error: "baseUrl required" });
-const store = await repo.create({ name, baseUrl, country, categories });
-    res.status(201).json(store);
-  } catch (error) {
-    console.error("Error creating store:", error);
-    res.status(500).json({ error: "Error creating store" });
-  }
-};
+

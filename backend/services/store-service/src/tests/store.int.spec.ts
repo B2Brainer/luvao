@@ -19,11 +19,4 @@ describe('Integration: /api/stores', () => {
     const res = await request(app).get('/api/stores/999');
     expect([404, 500]).toContain(res.status);
   });
-
-  it('POST /api/stores → should reject invalid body', async () => {
-    const res = await request(app)
-      .post('/api/stores')
-      .send({}); // Falta body válido
-    expect([400, 404, 500]).toContain(res.status);
-  });
 });

@@ -19,15 +19,4 @@ export class StoreRepositoryPrisma {
       }
     });
   }
-
-  async create(store: { name: string; baseUrl: string; country?: string; categories: string[] }) {
-    return this.prisma.store.create({
-      data: {
-        name: store.name,
-        baseUrl: store.baseUrl,
-        country: store.country,
-        categories: store.categories
-      }
-    });
-  }
 }
