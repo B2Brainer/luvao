@@ -27,6 +27,11 @@ export class ProductRepositoryPrisma {
   return this.prisma.product.findMany();
 }
 
+async findById(id: number) {
+    return this.prisma.product.findUnique({
+      where: { id }
+    });
+  }
 }
 
 

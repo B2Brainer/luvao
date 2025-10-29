@@ -12,6 +12,15 @@ export class StoreRepositoryPrisma {
 
   // buscar tiendas que tengan la categoría (category) dentro del JSON categories
   async findByCategory(category: string) {
+    // CAMBIAR: Manejar el caso cuando category es undefined o vacío
+    if (!category) {
+      return this.prisma.store.findMany({
+        where: {
+          isActive: true
+        }
+      });
+    }
+    
     return this.prisma.store.findMany({
       where: {
         isActive: true,
@@ -19,4 +28,11 @@ export class StoreRepositoryPrisma {
       }
     });
   }
+
+  async findById(id: number) {
+    return this.prisma.store.findUnique({
+      where: { id }
+    });
+  }
 }
+

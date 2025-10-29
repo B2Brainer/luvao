@@ -61,4 +61,23 @@ export const getAllProducts = async (_req: Request, res: Response) => {
   }
 };
 
+// AGREGAR esta nueva función al archivo existente:
+export const getProductById = async (req: Request, res: Response) => {
+  try {
+    const productId = parseInt(req.params.id);
+    
+    // Necesitamos agregar este método al repositorio
+    const product = await repo.findById(productId);
+    
+    if (!product) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+    
+    return res.json(product);
+  } catch (err) {
+    console.error("Error fetching product:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
 
