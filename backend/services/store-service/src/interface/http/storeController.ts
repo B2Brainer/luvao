@@ -6,9 +6,14 @@ const repo = new StoreRepositoryPrisma();
 export const getStoresByCategory = async (req: Request, res: Response) => {
   try {
     const category = req.query.category as string;
+    
+    // CAMBIAR: Usar el repositorio en lugar del mock
+    const stores = await repo.findByCategory(category);
+    
     res.status(200).json({
-      message: "Mocked store response",
-      category: category || "all",
+      message: "Stores retrieved successfully",
+      stores: stores,
+      count: stores.length
     });
   } catch (error) {
     console.error("Error fetching stores:", error);
@@ -16,14 +21,23 @@ export const getStoresByCategory = async (req: Request, res: Response) => {
   }
 };
 
-export const createStore = async (req: Request, res: Response) => {
+// AGREGAR: Nueva función para obtener tienda por ID
+export const getStoreById = async (req: Request, res: Response) => {
   try {
-    const { name, baseUrl, country, categories } = req.body;
-if (!baseUrl) return res.status(400).json({ error: "baseUrl required" });
-const store = await repo.create({ name, baseUrl, country, categories });
-    res.status(201).json(store);
+    const storeId = parseInt(req.params.id);
+    
+    // Necesitamos agregar este método al repositorio
+    const store = await repo.findById(storeId);
+    
+    if (!store) {
+      return res.status(404).json({ error: "Store not found" });
+    }
+    
+    res.status(200).json(store);
   } catch (error) {
-    console.error("Error creating store:", error);
-    res.status(500).json({ error: "Error creating store" });
+    console.error("Error fetching store:", error);
+    res.status(500).json({ error: "Error fetching store" });
   }
 };
+
+

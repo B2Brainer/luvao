@@ -23,14 +23,15 @@ export class ProductRepositoryPrisma {
     });
   }
 
-  async createMany(products: { name: string; type: string; storeId: number; price: number; sku?: string }[]) {
-    return this.prisma.product.createMany({ data: products, skipDuplicates: true });
-  }
-
   async getAll() {
   return this.prisma.product.findMany();
 }
 
+async findById(id: number) {
+    return this.prisma.product.findUnique({
+      where: { id }
+    });
+  }
 }
 
 

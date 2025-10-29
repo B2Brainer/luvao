@@ -48,24 +48,6 @@ export const getProductsByType = async (req: Request, res: Response) => {
   }
 };
 
-export const createProducts = async (req: Request, res: Response) => {
-  try {
-    const products = req.body;
-    if (!Array.isArray(products) || products.length === 0) {
-      return res.status(400).json({ message: "Products array required" });
-    }
-
-    const result = await repo.createMany(products);
-    return res.status(201).json({
-      message: "Products created successfully",
-      count: result.count,
-    });
-  } catch (err) {
-    console.error("Error creating products:", err);
-    return res.status(500).json({ message: "Server error" });
-  }
-};
-
 export const getAllProducts = async (_req: Request, res: Response) => {
   try {
     const products = await repo.getAll();
@@ -76,6 +58,25 @@ export const getAllProducts = async (_req: Request, res: Response) => {
   } catch (err) {
     console.error("Error fetching products:", err);
     return res.status(500).json({ message: "server error" });
+  }
+};
+
+// AGREGAR esta nueva función al archivo existente:
+export const getProductById = async (req: Request, res: Response) => {
+  try {
+    const productId = parseInt(req.params.id);
+    
+    // Necesitamos agregar este método al repositorio
+    const product = await repo.findById(productId);
+    
+    if (!product) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+    
+    return res.json(product);
+  } catch (err) {
+    console.error("Error fetching product:", err);
+    return res.status(500).json({ message: "Server error" });
   }
 };
 
