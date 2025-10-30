@@ -55,7 +55,7 @@ services:
       - pg_product
     ports:
       - "3002:3002"
-    command: npm start
+    command: npm run start:with-db
     networks:
       - backend-net
 

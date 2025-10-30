@@ -1,14 +1,18 @@
 import { Router } from "express";
-import { getProductsByType, getAllProducts } from "./productController";
-import { getProductById } from "./productController";
+import { getProductsByType, getAllProducts, getProductById, createProducts } from "./productController";
 
 export const ProductRouter = Router();
 
-// Nueva ruta para obtener todos los productos
+// Crear (uno o varios)
+ProductRouter.post("/", createProducts);
+
+// Obtener todos
 ProductRouter.get("/", getAllProducts);
 
-// Filtrar productos por tipo
+// Filtrar por tipo
 ProductRouter.get("/filter", getProductsByType);
+
+// Obtener por id
 ProductRouter.get("/:id", getProductById);
 
 

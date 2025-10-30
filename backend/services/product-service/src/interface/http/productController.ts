@@ -14,6 +14,7 @@ interface StoreResponse {
   stores?: { id: number; name: string; isActive?: boolean }[];
 }
 
+// -------- GETs ----------
 export const getProductsByType = async (req: Request, res: Response) => {
   try {
     const type = (req.query.type as string) || "";
@@ -22,7 +23,6 @@ export const getProductsByType = async (req: Request, res: Response) => {
     const onlyActiveStores = (req.query.onlyActiveStores as string) === "true";
 
     if (onlyActiveStores) {
-      // ✅ Tipado de Axios para evitar 'unknown'
       const resp = await axios.get<StoreResponse>(`${SERVICE_STORE_URL}/stores`, {
         params: { category: type },
       });
@@ -61,22 +61,65 @@ export const getAllProducts = async (_req: Request, res: Response) => {
   }
 };
 
-// AGREGAR esta nueva función al archivo existente:
 export const getProductById = async (req: Request, res: Response) => {
   try {
     const productId = parseInt(req.params.id);
-    
-    // Necesitamos agregar este método al repositorio
     const product = await repo.findById(productId);
-    
     if (!product) {
       return res.status(404).json({ message: "Product not found" });
     }
-    
     return res.json(product);
   } catch (err) {
     console.error("Error fetching product:", err);
     return res.status(500).json({ message: "Server error" });
+  }
+};
+
+// -------- POST (bulk/single) ----------
+type IncomingProduct = {
+  name: string;
+  type: string;
+  price: number;
+  storeId: number;
+};
+
+function normalizeBody(body: any): IncomingProduct[] {
+  // Acepta array o un solo objeto; valida campos mínimos
+  const normalizeOne = (p: any): IncomingProduct | null => {
+    if (!p) return null;
+    const name = String(p.name ?? "").trim();
+    const type = String(p.type ?? "").trim();
+    const price = Number(p.price);
+    const storeId = Number(p.storeId);
+    if (!name || !type || Number.isNaN(price) || Number.isNaN(storeId)) return null;
+    return { name, type, price, storeId };
+  };
+
+  if (Array.isArray(body)) {
+    return body.map(normalizeOne).filter(Boolean) as IncomingProduct[];
+  }
+  const one = normalizeOne(body);
+  return one ? [one] : [];
+}
+
+export const createProducts = async (req: Request, res: Response) => {
+  try {
+    const items = normalizeBody(req.body);
+    if (items.length === 0) {
+      return res.status(400).json({ message: "Invalid payload. Expecting product or array of products with {name,type,price,storeId}" });
+    }
+
+    // Si llega uno, puedes crear individual; si llega más, usa createMany.
+    if (items.length === 1) {
+      const created = await repo.createOne(items[0]);
+      return res.status(201).json({ count: 1, products: [created] });
+    }
+
+    const result = await repo.createMany(items);
+    return res.status(201).json({ count: result.count });
+  } catch (err) {
+    console.error("Error creating products:", err);
+    return res.status(500).json({ message: "server error" });
   }
 };
 
