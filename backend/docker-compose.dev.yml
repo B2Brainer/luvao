@@ -28,6 +28,28 @@ services:
     networks:
       - backend-net
 
+  pg_user:
+    image: postgres:15
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: user_service_db
+    ports:
+      - "5440:5432"
+
+    volumes:
+      - pg_user_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+    - backend-net
+
+
+
   pg_crawler:
     image: postgres:15
     environment:
@@ -74,6 +96,24 @@ services:
       sh -c "npx prisma db push && npm start"
     networks:
       - backend-net
+  
+  user-service:
+    build:
+      context: ./services/user-service
+      dockerfile: Dockerfile
+    ports:
+      - "3003:3003"
+    env_file:
+      - ./services/user-service/.env
+    depends_on:
+      pg_user:
+        condition: service_healthy
+    networks:
+      - backend-net
+    command: >
+      sh -c "npx prisma migrate deploy && npm start"
+
+
 
   crawler-service:
     build:
@@ -102,6 +142,7 @@ volumes:
   pg_product_data:
   pg_store_data:
   pg_crawler_data:
+  pg_user_data:
 
 networks:
   backend-net:

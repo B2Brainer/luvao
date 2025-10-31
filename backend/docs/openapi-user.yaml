@@ -1,0 +1,46 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "User Service API",
+    "version": "1.0.0",
+    "description": "CRUD básico de usuarios para el comparador de supermercados"
+  },
+  "servers": [
+    { "url": "http://localhost:3003" }
+  ],
+  "paths": {
+    "/api/users": {
+      "get": {
+        "summary": "Obtener todos los usuarios",
+        "responses": { "200": { "description": "Lista de usuarios" } }
+      },
+      "post": {
+        "summary": "Crear un nuevo usuario",
+        "responses": { "201": { "description": "Usuario creado" } }
+      }
+    },
+    "/api/users/{id}": {
+      "get": {
+        "summary": "Obtener usuario por ID",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": { "200": { "description": "Usuario encontrado" } }
+      },
+      "put": {
+        "summary": "Actualizar usuario",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": { "200": { "description": "Usuario actualizado" } }
+      },
+      "delete": {
+        "summary": "Eliminar usuario",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": { "204": { "description": "Usuario eliminado" } }
+      }
+    }
+  }
+}
