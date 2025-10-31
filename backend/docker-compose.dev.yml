@@ -37,7 +37,6 @@ services:
       POSTGRES_DB: user_service_db
     ports:
       - "5440:5432"
-
     volumes:
       - pg_user_data:/var/lib/postgresql/data
     healthcheck:
@@ -46,9 +45,7 @@ services:
       timeout: 5s
       retries: 5
     networks:
-    - backend-net
-
-
+      - backend-net
 
   pg_crawler:
     image: postgres:15
@@ -63,11 +60,11 @@ services:
     networks:
       - backend-net
 
-
   # ---------------------
   # Servicios de backend
   # ---------------------
   product-service:
+    image: luvao-product-service
     build:
       context: .
       dockerfile: ./services/product-service/Dockerfile
@@ -83,6 +80,7 @@ services:
       - backend-net
 
   store-service:
+    image: luvao-store-service
     build:
       context: .
       dockerfile: ./services/store-service/Dockerfile
@@ -98,6 +96,7 @@ services:
       - backend-net
   
   user-service:
+    image: luvao-user-service
     build:
       context: ./services/user-service
       dockerfile: Dockerfile
@@ -113,11 +112,11 @@ services:
     command: >
       sh -c "npx prisma migrate deploy && npm start"
 
-
-
   crawler-service:
+    image: luvao-crawler-service
     build:
       context: ./services/crawler-service
+      dockerfile: Dockerfile
     container_name: crawler-service
     depends_on:
       - pg_crawler
@@ -132,7 +131,7 @@ services:
       STORE_SERVICE_URL: http://store-service:3001
       PRODUCT_SERVICE_URL: http://product-service:3002
     command: >
-      sh -c "prisma migrate deploy &&
+      sh -c "python -m prisma migrate deploy &&
          export PYTHONPATH=/app &&
          uvicorn src.app:app --host 0.0.0.0 --port 3000"
     networks:
@@ -147,4 +146,5 @@ volumes:
 networks:
   backend-net:
     driver: bridge
+
 
