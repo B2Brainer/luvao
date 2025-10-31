@@ -80,4 +80,26 @@ export const getProductById = async (req: Request, res: Response) => {
   }
 };
 
+export const createProducts = async (req: Request, res: Response) => {
+  try {
+    const products = req.body;
+
+    if (!Array.isArray(products) || products.length === 0) {
+      return res.status(400).json({ message: "Product list required" });
+    }
+
+    const created = await repo.prisma.product.createMany({
+      data: products,
+      skipDuplicates: true, // evita errores por productos duplicados
+    });
+
+    return res.status(201).json({
+      message: "Products inserted successfully",
+      count: created.count,
+    });
+  } catch (err) {
+    console.error("Error creating products:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
 
