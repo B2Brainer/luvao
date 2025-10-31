@@ -99,8 +99,8 @@ services:
   
   user-service:
     build:
-      context: ./services/user-service
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: services/user-service/Dockerfile
     ports:
       - "3003:3003"
     env_file:
