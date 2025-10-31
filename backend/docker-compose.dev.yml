@@ -41,6 +41,7 @@ services:
     networks:
       - backend-net
 
+
   # ---------------------
   # Servicios de backend
   # ---------------------
