@@ -40,4 +40,25 @@ export const getStoreById = async (req: Request, res: Response) => {
   }
 };
 
+// ✅ Nuevo: Crear tienda
+export const createStore = async (req: Request, res: Response) => {
+  try {
+    const data = req.body;
+
+    const store = await repo.prisma.store.create({
+      data: {
+        name: data.name,
+        baseUrl: data.baseUrl,
+        country: data.country,
+        categories: data.categories,
+      },
+    });
+
+    res.status(201).json(store);
+  } catch (error) {
+    console.error("Error creating store:", error);
+    res.status(500).json({ error: "Error creating store" });
+  }
+};
+
 
