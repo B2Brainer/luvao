@@ -14,6 +14,21 @@ services:
     networks:
       - backend-net
 
+  # Base de datos para products
+  pg_product:
+    image: postgres:15
+    container_name: pg_product
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: productdb
+    ports:
+      - "5435:5432"
+    volumes:
+      - pg_product_data:/var/lib/postgresql/data
+    networks:
+      - backend-net
+
   # Servicio de stores con NestJS
   stores-service:
     build:
@@ -31,8 +46,26 @@ services:
     networks:
       - backend-net
 
+  # Servicio de products con NestJS
+  product-service:
+    build:
+      context: ./services/product-service
+      dockerfile: Dockerfile
+    container_name: product-service
+    env_file:
+      - ./services/product-service/.env
+    depends_on:
+      - pg_product
+    ports:
+      - "3002:3002"
+    command: >
+      sh -c "npx prisma db push && npm run start:dev"
+    networks:
+      - backend-net
+
 volumes:
   pg_store_data:
+  pg_product_data:
 
 networks:
   backend-net:
