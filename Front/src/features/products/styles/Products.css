@@ -1,0 +1,90 @@
+.small-btn {
+  padding: 6px 10px;       
+  font-size: 0.85rem;       
+  margin-top: 6px;
+}
+
+.home-container {
+  padding: 20px;
+  max-width: 900px;
+  margin: auto;
+}
+
+.card {
+  background: #ffffff0c;
+  padding: 15px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  border: 1px solid #ffffff33;
+}
+
+.card h2 {
+  margin-bottom: 10px;
+}
+
+.card input {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 10px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+}
+
+.card button {
+  padding: 10px;
+  width: 100%;
+  background: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.card button:hover {
+  background: #2563eb;
+}
+
+.result-box {
+  background: #111;
+  padding: 15px;
+  border-radius: 8px;
+  margin-top: 20px;
+  white-space: pre-wrap;
+}
+
+.error {
+  color: red;
+}
+
+.products-page {
+  width: 100%;
+  max-width: 1200px;
+  padding: 2rem;
+  margin: 0 auto;
+}
+
+.products-container {
+  margin: 0 auto;
+
+}
+
+.products-header {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 1rem;
+}
+
+.search {
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  border: 1px solid #ddd;
+  width: 320px;
+}
+
+.products-grid {
+  display: grid;
+  justify-content: center; 
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  flex-wrap: wrap;
+  gap: 2rem;
+}

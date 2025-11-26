@@ -1,0 +1,140 @@
+.back-btn {
+  background: #667eea;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  margin-bottom: 1.5rem;
+  font-size: 1rem;
+}
+
+.back-btn:hover {
+  background: #764ba2;
+}
+
+.detail-container {
+  background: white;
+  border-radius: 12px;
+  padding: 2rem;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+}
+
+.detail-image {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.placeholder {
+  width: 100%;
+  aspect-ratio: 1;
+  background: #f3f3f6;
+  border-radius: 8px;
+}
+
+.detail-info h1 {
+  margin: 0 0 0.5rem 0;
+  font-size: 2rem;
+  color: #333;
+}
+
+.category {
+  color: #666;
+  font-size: 0.9rem;
+  margin: 0 0 1rem 0;
+}
+
+.description {
+  color: #666;
+  margin: 0 0 1.5rem 0;
+  line-height: 1.6;
+}
+
+.best-price {
+  background: #f0f4ff;
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+}
+
+.best-price span {
+  display: block;
+  color: #666;
+  font-size: 0.9rem;
+  margin-bottom: 0.5rem;
+}
+
+.best-price .price {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #2b6cb0;
+  margin: 0;
+}
+
+.prices-table h3 {
+  margin: 0 0 1rem 0;
+  font-size: 1.1rem;
+  color: #333;
+}
+
+.price-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr auto;
+  gap: 1rem;
+  align-items: center;
+  padding: 0.75rem;
+  border-bottom: 1px solid #eee;
+}
+
+.price-row:last-child {
+  border-bottom: none;
+}
+
+.store-name {
+  font-weight: 600;
+  color: #333;
+}
+
+.price-row .price {
+  font-weight: 700;
+  color: #2b6cb0;
+}
+
+.date {
+  color: #999;
+  font-size: 0.9rem;
+}
+
+.link-btn {
+  background: #667eea;
+  color: white;
+  padding: 0.4rem 0.8rem;
+  border-radius: 4px;
+  text-decoration: none;
+  font-size: 0.85rem;
+  text-align: center;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.link-btn:hover {
+  background: #764ba2;
+}
+
+@media (max-width: 768px) {
+  .detail-container {
+    grid-template-columns: 1fr;
+  }
+
+  .price-row {
+    grid-template-columns: 1fr;
+  }
+
+  .detail-info h1 {
+    font-size: 1.5rem;
+  }
+}

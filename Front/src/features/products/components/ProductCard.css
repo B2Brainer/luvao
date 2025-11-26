@@ -1,0 +1,6 @@
+.product-card { background:#fff; padding:1rem; border-radius:8px; box-shadow:0 6px 18px rgba(0,0,0,0.08); cursor:pointer; transition:transform .12s; }
+.product-card:hover { transform:translateY(-4px); }
+.product-thumb { height:110px; background:#f3f3f6; border-radius:6px; margin-bottom:0.75rem; }
+.product-title { margin:0 0 0.25rem 0; font-size:1rem; }
+.product-store { margin:0 0.5rem 0.5rem 0; color:#666; font-size:0.9rem; }
+.product-price { font-weight:700; color:#2b6cb0; }
