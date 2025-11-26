@@ -1,0 +1,209 @@
+services:
+  # Base de datos para stores
+  pg_store:
+    image: postgres:15
+    container_name: pg_store
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: storedb
+    ports:
+      - "5434:5432"
+    volumes:
+      - pg_store_data:/var/lib/postgresql/data
+    networks:
+      - backend-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d storedb"]
+      interval: 2s
+      timeout: 2s
+      retries: 10
+      start_period: 5s
+
+  # Base de datos para products
+  pg_product:
+    image: postgres:15
+    container_name: pg_product
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: productdb
+    ports:
+      - "5435:5432"
+    volumes:
+      - pg_product_data:/var/lib/postgresql/data
+    networks:
+      - backend-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d productdb"]
+      interval: 2s
+      timeout: 2s
+      retries: 10
+      start_period: 5s
+
+  # Base de datos para users
+  pg_user:
+    image: postgres:15
+    container_name: pg_user
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: userdb
+    ports:
+      - "5436:5432"
+    volumes:
+      - pg_user_data:/var/lib/postgresql/data
+    networks:
+      - backend-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d userdb"]
+      interval: 2s
+      timeout: 2s
+      retries: 10
+      start_period: 5s
+
+  # Base de datos scraped
+  pg_scraped:
+    image: postgres:15
+    container_name: pg_scraped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: scrapeddb
+    ports:
+      - "5437:5432"
+    volumes:
+      - pg_scraped_data:/var/lib/postgresql/data
+    networks:
+      - backend-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d scrapeddb"]
+      interval: 2s
+      timeout: 2s
+      retries: 10
+      start_period: 5s
+
+  # stores
+  stores-service:
+    build:
+      context: ./services/stores-service
+      dockerfile: Dockerfile
+    container_name: stores-service
+    env_file:
+      - ./services/stores-service/.env
+    depends_on:
+      pg_store:
+        condition: service_healthy
+    ports:
+      - "3001:3001"
+    command: >
+      sh -c "npx prisma db push && npm run start:dev"
+    networks:
+      - backend-net
+
+  # products
+  product-service:
+    build:
+      context: ./services/product-service
+      dockerfile: Dockerfile
+    container_name: product-service
+    env_file:
+      - ./services/product-service/.env
+    depends_on:
+      pg_product:
+        condition: service_healthy
+    ports:
+      - "3002:3002"
+    command: >
+      sh -c "npx prisma db push && npm run start:dev"
+    networks:
+      - backend-net
+
+  # users
+  user-service:
+    build:
+      context: ./services/user-service
+      dockerfile: Dockerfile
+    container_name: user-service
+    env_file:
+      - ./services/user-service/.env
+    depends_on:
+      pg_user:
+        condition: service_healthy
+    ports:
+      - "3003:3003"
+    command: >
+      sh -c "npx prisma db push && npm run start:dev"
+    networks:
+      - backend-net
+
+  # scraped
+  scraped-service:
+    build:
+      context: ./services/scraped-service
+      dockerfile: Dockerfile
+    container_name: scraped-service
+    env_file:
+      - ./services/scraped-service/.env
+    depends_on:
+      pg_scraped:
+        condition: service_healthy
+    ports:
+      - "3005:3005"
+    command: >
+      sh -c "npx prisma db push && npm run start:dev"
+    networks:
+      - backend-net
+
+  # crawler (Python/FastAPI)
+  crawler-service:
+    build:
+      context: ./services/crawler-service
+      dockerfile: Dockerfile
+    container_name: crawler-service
+    env_file:
+      - ./services/crawler-service/.env
+    depends_on:
+      stores-service:
+        condition: service_started
+      product-service:
+        condition: service_started
+      scraped-service:
+        condition: service_started
+    ports:
+      - "3004:3004"
+    command: >
+      sh -c "uvicorn src.app:app --host 0.0.0.0 --port 3004 --reload"
+    networks:
+      - backend-net
+
+  orchestrator:
+    build:
+      context: ./orchestrator
+      dockerfile: Dockerfile
+    container_name: orchestrator
+    env_file:
+      - ./orchestrator/.env
+    depends_on:
+      - user-service
+      - product-service
+      - stores-service
+      - scraped-service
+      - crawler-service
+    ports:
+      - "3006:3006"
+    command: >
+      sh -c "npm run start:dev"
+    networks:
+      - backend-net
+
+volumes:
+  pg_store_data:
+  pg_product_data:
+  pg_user_data:
+  pg_scraped_data:
+
+networks:
+  backend-net:
+    driver: bridge
+
