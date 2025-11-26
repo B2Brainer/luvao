@@ -1,0 +1,23 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model ScrapedProduct {
+  id           String   @id @default(uuid())
+  storeName    String
+  query        String
+  name         String
+  price        Float?
+  url          String?
+  availability Boolean?
+  scrapedAt    DateTime @default(now())
+
+  @@map("scraped_products")
+}
+
+
