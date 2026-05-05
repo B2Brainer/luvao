@@ -15,10 +15,10 @@ services:
       - backend-net
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d storedb"]
-      interval: 2s
-      timeout: 2s
-      retries: 10
-      start_period: 5s
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
 
   # Base de datos para products
   pg_product:
@@ -36,10 +36,10 @@ services:
       - backend-net
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d productdb"]
-      interval: 2s
-      timeout: 2s
-      retries: 10
-      start_period: 5s
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
 
   # Base de datos para users
   pg_user:
@@ -57,10 +57,10 @@ services:
       - backend-net
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d userdb"]
-      interval: 2s
-      timeout: 2s
-      retries: 10
-      start_period: 5s
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
 
   # Base de datos scraped
   pg_scraped:
@@ -78,10 +78,10 @@ services:
       - backend-net
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d scrapeddb"]
-      interval: 2s
-      timeout: 2s
-      retries: 10
-      start_period: 5s
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
 
   # stores
   stores-service:

@@ -1,5 +1,6 @@
 # src/app.py
 from fastapi import FastAPI, HTTPException
+import httpx
 from src.clients.store_client import StoreClient
 from src.clients.product_client import ProductClient
 from src.clients.scraped_client import ScrapedClient
@@ -118,7 +119,6 @@ async def test_connections():
     """Verificar conexión con otros servicios."""
     store_client = StoreClient()
     product_client = ProductClient()
-    scraped_client = ScrapedClient()
     
     results = {}
     

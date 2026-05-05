@@ -1,4 +1,4 @@
-import { useParams, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import '../styles/ProductDetail.css'
 
 // mock para UI
@@ -15,7 +15,6 @@ const MOCK_PRODUCT_DETAIL = {
 }
 
 export default function ProductDetail() {
-  const { id } = useParams()
   const nav = useNavigate()
   const product = MOCK_PRODUCT_DETAIL // reemplazar con fetch real
 
