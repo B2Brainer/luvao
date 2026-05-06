@@ -2,4 +2,6 @@ fastapi
 uvicorn[standard]
 httpx
 beautifulsoup4
+redis
+selenium
 
