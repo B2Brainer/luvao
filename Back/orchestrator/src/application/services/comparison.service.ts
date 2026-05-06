@@ -264,7 +264,7 @@ export class ComparisonService {
 
   private extractPresentation(name: string) {
     const normalized = this.normalizeTextForPresentation(name);
-    const match = normalized.match(/(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d+)?)\s*(kg|g|gr|l|lt|ml)\b/);
+    const match = normalized.match(/(\d+(?:[.,]\d{3})*(?:[.,]\d+)?)\s*(kg|g|gr|l|lt|ml)\b/);
     if (!match) {
       return { amount: null, unit: null, label: null };
     }
