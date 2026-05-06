@@ -5,14 +5,14 @@ import { AuthService } from '../../application/services/auth.service';
 import { DashboardService } from '../../application/services/dashboard.service';
 import { ProductService } from '../../application/services/product.service'; 
 import { CrawlerService } from '../../application/services/crawler.service'; 
+import { ComparisonService } from '../../application/services/comparison.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { CreateProductDto } from './dto/create-product.dto'; 
 import { DeleteProductDto } from './dto/delete-product.dto';
+import { OptimizeListDto } from './dto/optimize-list.dto';
 import { SearchByAvailabilityDto } from './dto/search-by-availability.dto';
 import { SearchByNameDto } from './dto/search-by-name.dto';
-import { SearchByQueryDto } from './dto/search-by-query.dto';
-import { SearchByStoreDto } from './dto/search-by-store.dto';
 
 @ApiTags('orchestrator')
 @Controller('orchestrator')
@@ -22,6 +22,7 @@ export class OrchestratorController {
     private dashboardService: DashboardService,
     private productService: ProductService, 
     private crawlerService: CrawlerService, 
+    private comparisonService: ComparisonService,
   ) {}
 
   @Post('login')
@@ -88,5 +89,19 @@ export class OrchestratorController {
   @ApiOperation({ summary: 'Obtener datos del dashboard' })
   async getDashboard() {
     return this.dashboardService.getDashboard();
+  }
+
+  @Get('compare/:product')
+  @ApiOperation({ summary: 'Comparar un producto entre tiendas con matching canónico' })
+  @ApiResponse({ status: 200, description: 'Ranking comparativo por producto' })
+  async compareProduct(@Param('product') product: string) {
+    return this.comparisonService.compareByProduct(product);
+  }
+
+  @Post('optimize-list')
+  @ApiOperation({ summary: 'Optimizar lista completa de compras' })
+  @ApiResponse({ status: 200, description: 'Selección sugerida y total estimado' })
+  async optimizeList(@Body() dto: OptimizeListDto) {
+    return this.comparisonService.optimizeShoppingList(dto.items);
   }
 }

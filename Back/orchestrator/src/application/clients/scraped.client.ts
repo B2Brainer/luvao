@@ -3,6 +3,13 @@ import { HttpService } from '@nestjs/axios';
 import { Injectable } from '@nestjs/common';
 import { SERVICES } from '../../config/orchestrator.config';
 
+type ScrapedFilters = {
+  storeName?: string;
+  query?: string;
+  name?: string;
+  availability?: boolean;
+};
+
 @Injectable()
 export class ScrapedClient {
   constructor(private http: HttpService) {}
@@ -47,6 +54,14 @@ export class ScrapedClient {
   async searchByStore(storeName: string) {
     const response = await this.http.axiosRef.get(
       `${SERVICES.SCRAPED}/searched-products/store/${storeName}`
+    );
+    return response.data;
+  }
+
+  async searchByFilters(filters: ScrapedFilters) {
+    const response = await this.http.axiosRef.get(
+      `${SERVICES.SCRAPED}/searched-products/search/filters`,
+      { params: filters }
     );
     return response.data;
   }
