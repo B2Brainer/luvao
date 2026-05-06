@@ -21,6 +21,9 @@ export const authService = {
 // -------- ORCHESTRATOR SERVICE --------
 export const orchestratorService = {
   // PRODUCT CRUD
+  getProductList: () =>
+    api.get('/orchestrator/products'),
+
   createProduct: (name: string) =>
     api.post('/orchestrator/products', { name }),
 
@@ -30,6 +33,9 @@ export const orchestratorService = {
   // SCRAPING
   refreshScraping: () =>
     api.post('/orchestrator/refresh-scraping'),
+
+  getScrapingJobStatus: (jobId: string) =>
+    api.get(`/orchestrator/scraping-jobs/${jobId}`),
 
   // DASHBOARD
   getDashboard: () =>
@@ -56,6 +62,16 @@ export const orchestratorService = {
     api.get('/orchestrator/search/name', {
       params: { name },
     }),
+
+  // COMPARISON ENGINE
+  compareProduct: (product: string) =>
+    api.get(`/orchestrator/compare/${encodeURIComponent(product)}`),
+
+  optimizeList: (items: Array<{ product: string; quantity?: number }>) =>
+    api.post('/orchestrator/optimize-list', { items }),
+
+  optimizeFullCatalog: () =>
+    api.post('/orchestrator/optimize-list', {}),
 }
 
 

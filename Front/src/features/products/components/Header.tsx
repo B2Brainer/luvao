@@ -1,31 +1,24 @@
-import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import './Header.css'
 
-interface HeaderProps {
-  onSearch?: (query: string) => void
-}
-
-export default function Header({ onSearch }: HeaderProps) {
-  const [query, setQuery] = useState('')
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault()
-    onSearch?.(query)
-  }
+export default function Header() {
 
   return (
     <header className="header">
-      <div className="header-logo">LUVAO</div>
-      <form className="header-search" onSubmit={handleSearch}>
-        <input
-          type="text"
-          placeholder="Buscar producto..."
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          className="header-input"
-        />
-        <button type="submit" className="header-btn">🔍</button>
-      </form>
+      <div className="brand-wrap">
+        <p className="brand-badge">LUVAO</p>
+        <span>Comparador inteligente de mercado</span>
+      </div>
+
+      <nav className="header-nav">
+        <a href="#">Búsqueda</a>
+        <a href="#">Comparación</a>
+        <a href="#">Lista optimizada</a>
+      </nav>
+
+      <div className="header-actions">
+        <Link to="/login">Salir</Link>
+      </div>
     </header>
   )
 }

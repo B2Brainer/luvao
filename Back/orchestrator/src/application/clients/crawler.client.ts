@@ -13,4 +13,11 @@ export class CrawlerClient {
     );
     return response.data;
   }
+
+  async getJobStatus(jobId: string) {
+    const response = await this.http.axiosRef.get(
+      `${SERVICES.CRAWLER}/crawler/jobs/${jobId}`
+    );
+    return response.data;
+  }
 }

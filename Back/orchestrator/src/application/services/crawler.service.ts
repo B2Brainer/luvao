@@ -13,4 +13,8 @@ export class CrawlerService {
     // El orchestrator solo debe disparar el proceso y devolver su resultado.
     return this.crawlerClient.refresh();
   }
+
+  async getScrapingJobStatus(jobId: string) {
+    return this.crawlerClient.getJobStatus(jobId);
+  }
 }

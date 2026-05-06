@@ -85,6 +85,12 @@ export class OrchestratorController {
     return this.crawlerService.refreshScraping();
   }
 
+  @Get('scraping-jobs/:jobId')
+  @ApiOperation({ summary: 'Consultar estado de job de scraping' })
+  async getScrapingJobStatus(@Param('jobId') jobId: string) {
+    return this.crawlerService.getScrapingJobStatus(jobId);
+  }
+
   @Get('dashboard')
   @ApiOperation({ summary: 'Obtener datos del dashboard' })
   async getDashboard() {

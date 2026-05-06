@@ -11,59 +11,30 @@ body {
 
 #root {
   width: 100%;
-  height: 100vh;
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
-}
-
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
-}
-
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
-  }
-}
-
-.card {
-  padding: 2em;
-}
-
-.read-the-docs {
-  color: #888;
+  min-height: 100vh;
 }
 
 .app-background {
   width: 100vw;
   height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #13283b 0%, #175153 52%, #1f6b51 100%);
   display: flex;
   justify-content: center;
   align-items: center;
   overflow: hidden;
 }
-body {
-  margin: 0;
+
+.app-root {
+  min-height: 100vh;
+  width: 100%;
+  background:
+    radial-gradient(circle at 14% 10%, #ffe8b7 0%, transparent 28%),
+    radial-gradient(circle at 88% 12%, #dff4f0 0%, transparent 30%),
+    linear-gradient(180deg, #fdf6eb 0%, #f5f6fb 48%, #f3fbf6 100%);
+  padding: 1rem;
+}
+
+.main-layout {
+  padding-top: 0.9rem;
 }
 

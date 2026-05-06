@@ -1,209 +1,518 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { orchestratorService } from '../../../services/api'
 import '../styles/Products.css'
 
+type RankingRow = {
+  id: string
+  storeName: string
+  sourceName: string
+  price: number | null
+  pricePerUnit: number | null
+  matchScore: number
+  presentation?: { label?: string | null }
+  url?: string | null
+}
+
+type CompareResponse = {
+  product: string
+  comparedCount: number
+  bestOverall: RankingRow | null
+  bestByStore: RankingRow[]
+  ranking: RankingRow[]
+}
+
+type ScrapingJob = {
+  id: string
+  status: 'pending' | 'running' | 'success' | 'failed'
+  updated_at?: string
+  result?: {
+    stores_processed?: string[]
+    products_sent?: number
+    queries_processed?: string[]
+  }
+  error?: string
+}
+
+type OptimizeLine = {
+  requested: string
+  quantity: number
+  subtotal: number | null
+  selected: RankingRow | null
+}
+
+type OptimizeResponse = {
+  requestedItems: number
+  resolvedItems: number
+  unresolvedItems: string[]
+  totalEstimated: number
+  estimatedByStore: Record<string, number>
+  lines: OptimizeLine[]
+}
+
+function priceLabel(price: number | null | undefined) {
+  if (price === null || price === undefined) {
+    return 'N/A'
+  }
+  return `$${price.toLocaleString('es-CO')}`
+}
+
+function progressForStatus(status?: ScrapingJob['status']) {
+  if (status === 'pending') {
+    return 25
+  }
+  if (status === 'running') {
+    return 70
+  }
+  return 100
+}
+
 function Products() {
-  const [newProduct, setNewProduct] = useState('')
-  const [deleteProductName, setDeleteProductName] = useState('')
+  const [productQuery, setProductQuery] = useState('arroz')
+  const [catalogProducts, setCatalogProducts] = useState<string[]>([])
 
-  // Filtros
-  const [availability, setAvailability] = useState('')
-  const [query, setQuery] = useState('')
-  const [storeName, setStoreName] = useState('')
-  const [searchName, setSearchName] = useState('')
+  const [compareLoading, setCompareLoading] = useState(false)
+  const [compareError, setCompareError] = useState('')
+  const [compareData, setCompareData] = useState<CompareResponse | null>(null)
 
-  const [result, setResult] = useState<any>(null)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
+  const [selectedStores, setSelectedStores] = useState<string[]>([])
+  const [maxPrice, setMaxPrice] = useState<number | null>(null)
+  const [sortBy, setSortBy] = useState<'price' | 'score' | 'unit'>('price')
 
-  const run = async (fn: () => Promise<void>) => {
-    setLoading(true)
-    setError('')
+  const [itemsInput, setItemsInput] = useState('')
+  const [items, setItems] = useState<Array<{ product: string; quantity: number }>>([])
+  const [optimizeLoading, setOptimizeLoading] = useState(false)
+  const [optimizeError, setOptimizeError] = useState('')
+  const [optimizeData, setOptimizeData] = useState<OptimizeResponse | null>(null)
+
+  const [scrapeLoading, setScrapeLoading] = useState(false)
+  const [scrapeError, setScrapeError] = useState('')
+  const [scrapeJob, setScrapeJob] = useState<ScrapingJob | null>(null)
+
+  useEffect(() => {
+    const loadCatalog = async () => {
+      try {
+        const res = await orchestratorService.getProductList()
+        setCatalogProducts(Array.isArray(res.data?.products) ? res.data.products : [])
+      } catch {
+        setCatalogProducts([])
+      }
+    }
+
+    loadCatalog()
+  }, [])
+
+  useEffect(() => {
+    if (!scrapeJob?.id || !['pending', 'running'].includes(scrapeJob.status)) {
+      return
+    }
+
+    const interval = setInterval(async () => {
+      try {
+        const res = await orchestratorService.getScrapingJobStatus(scrapeJob.id)
+        setScrapeJob(res.data)
+      } catch {
+        setScrapeError('No se pudo consultar el estado del scraping en tiempo real.')
+      }
+    }, 2500)
+
+    return () => clearInterval(interval)
+  }, [scrapeJob])
+
+  const availableStores = useMemo(() => {
+    const stores = new Set((compareData?.ranking ?? []).map((item) => item.storeName))
+    return Array.from(stores)
+  }, [compareData])
+
+  const filteredRanking = useMemo(() => {
+    let rows = [...(compareData?.ranking ?? [])]
+
+    if (selectedStores.length > 0) {
+      rows = rows.filter((row) => selectedStores.includes(row.storeName))
+    }
+
+    if (maxPrice !== null && !Number.isNaN(maxPrice)) {
+      rows = rows.filter((row) => row.price !== null && row.price <= maxPrice)
+    }
+
+    rows.sort((a, b) => {
+      if (sortBy === 'score') {
+        return b.matchScore - a.matchScore
+      }
+      if (sortBy === 'unit') {
+        return (a.pricePerUnit ?? Number.MAX_SAFE_INTEGER) - (b.pricePerUnit ?? Number.MAX_SAFE_INTEGER)
+      }
+      return (a.price ?? Number.MAX_SAFE_INTEGER) - (b.price ?? Number.MAX_SAFE_INTEGER)
+    })
+
+    return rows
+  }, [compareData, selectedStores, maxPrice, sortBy])
+
+  const compareMetrics = useMemo(() => {
+    if (!compareData || filteredRanking.length === 0) {
+      return null
+    }
+
+    const prices = filteredRanking
+      .map((row) => row.price)
+      .filter((value): value is number => value !== null)
+
+    if (prices.length === 0) {
+      return null
+    }
+
+    const best = Math.min(...prices)
+    const worst = Math.max(...prices)
+    const spread = worst - best
+
+    return {
+      best,
+      worst,
+      spread,
+      candidates: filteredRanking.length,
+    }
+  }, [compareData, filteredRanking])
+
+  const handleCompare = async () => {
+    if (!productQuery.trim()) {
+      return
+    }
+
+    setCompareLoading(true)
+    setCompareError('')
     try {
-      await fn()
+      const res = await orchestratorService.compareProduct(productQuery.trim())
+      setCompareData(res.data)
+      setSelectedStores([])
+      setMaxPrice(null)
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Error en la operación')
+      setCompareError(err.response?.data?.message || 'No se pudo comparar el producto.')
+      setCompareData(null)
     } finally {
-      setLoading(false)
+      setCompareLoading(false)
     }
   }
 
-  // ---- CRUD PRODUCTOS ----
-  const handleCreateProduct = async () => {
-    if (!newProduct.trim()) return
-    run(async () => {
-      const res = await orchestratorService.createProduct(newProduct)
-      setResult(res.data)
-      setNewProduct('')
+  const toggleStore = (store: string) => {
+    setSelectedStores((current) => {
+      if (current.includes(store)) {
+        return current.filter((item) => item !== store)
+      }
+      return [...current, store]
     })
   }
 
-  const handleDeleteProduct = async () => {
-    if (!deleteProductName.trim()) return
-    run(async () => {
-      const res = await orchestratorService.deleteProduct(deleteProductName)
-      setResult(res.data)
-      setDeleteProductName('')
+  const addItem = () => {
+    const product = itemsInput.trim().toLowerCase()
+    if (!product) {
+      return
+    }
+
+    setItems((current) => {
+      const found = current.find((item) => item.product === product)
+      if (found) {
+        return current.map((item) =>
+          item.product === product
+            ? { ...item, quantity: item.quantity + 1 }
+            : item,
+        )
+      }
+      return [...current, { product, quantity: 1 }]
     })
+    setItemsInput('')
   }
 
-  // ---- SCRAPING ----
-  const handleScrape = async () => {
-    run(async () => {
+  const changeQuantity = (product: string, delta: number) => {
+    setItems((current) =>
+      current
+        .map((item) =>
+          item.product === product
+            ? { ...item, quantity: Math.max(1, item.quantity + delta) }
+            : item,
+        ),
+    )
+  }
+
+  const removeItem = (product: string) => {
+    setItems((current) => current.filter((item) => item.product !== product))
+  }
+
+  const runOptimize = async (fullCatalog = false) => {
+    setOptimizeLoading(true)
+    setOptimizeError('')
+    try {
+      const res = fullCatalog
+        ? await orchestratorService.optimizeFullCatalog()
+        : await orchestratorService.optimizeList(items)
+      setOptimizeData(res.data)
+    } catch (err: any) {
+      setOptimizeError(err.response?.data?.message || 'No se pudo optimizar la lista.')
+      setOptimizeData(null)
+    } finally {
+      setOptimizeLoading(false)
+    }
+  }
+
+  const triggerScraping = async () => {
+    setScrapeLoading(true)
+    setScrapeError('')
+    try {
       const res = await orchestratorService.refreshScraping()
-      setResult(res.data)
-    })
-  }
-
-  const handleDashboard = async () => {
-    run(async () => {
-      const res = await orchestratorService.getDashboard()
-      setResult(res.data)
-    })
-  }
-
-  // ---- FILTROS ----
-  const handleSearchAvailability = async () => {
-    if (!availability) return
-    run(async () => {
-      const res = await orchestratorService.searchByAvailability(availability)
-      setResult(res.data)
-      setAvailability('')
-    })
-  }
-
-  const handleSearchQuery = async () => {
-    if (!query.trim()) return
-    run(async () => {
-      const res = await orchestratorService.searchByQuery(query)
-      setResult(res.data)
-      setQuery('')
-    })
-  }
-
-  const handleSearchStore = async () => {
-    if (!storeName.trim()) return
-    run(async () => {
-      const res = await orchestratorService.searchByStore(storeName)
-      setResult(res.data)
-      setStoreName('')
-    })
-  }
-
-  const handleSearchName = async () => {
-    if (!searchName.trim()) return
-    run(async () => {
-      const res = await orchestratorService.searchByName(searchName)
-      setResult(res.data)
-      setSearchName('')
-    })
+      if (!res.data?.jobId) {
+        throw new Error('El backend no devolvió jobId para seguimiento en tiempo real.')
+      }
+      setScrapeJob({ id: res.data.jobId, status: res.data.jobStatus || 'pending' })
+    } catch (err: any) {
+      setScrapeError(err.response?.data?.message || err.message || 'No se pudo iniciar el scraping.')
+      setScrapeJob(null)
+    } finally {
+      setScrapeLoading(false)
+    }
   }
 
   return (
-    <div className="home-container">
-      <h1>Panel de Control</h1>
+    <div className="ux-shell">
+      <section className="hero-card">
+        <p className="hero-kicker">Comparador inteligente en tiempo real</p>
+        <h1>Encuentra el mejor precio por tienda y optimiza tu mercado completo</h1>
+        <p className="hero-copy">
+          Busca un producto para comparar fuentes, activa scraping con seguimiento en vivo y construye una lista
+          optimizada con total estimado por tienda.
+        </p>
+      </section>
 
-      {/* CREAR PRODUCTO */}
-      <div className="card">
-        <h2>Agregar producto</h2>
-        <input
-          type="text"
-          placeholder="Nombre del producto"
-          value={newProduct}
-          onChange={(e) => setNewProduct(e.target.value)}
-        />
-        <button className="small-btn" onClick={handleCreateProduct} disabled={loading}>
-          Crear Producto
-        </button>
-      </div>
+      <section className="panel-grid">
+        <article className="panel panel-search">
+          <h2>Búsqueda y comparación</h2>
+          <p>Consulta un producto canónico y recibe ranking por score semántico y precio.</p>
 
-      {/* ELIMINAR PRODUCTO */}
-      <div className="card">
-        <h2>Eliminar producto</h2>
-        <input
-          type="text"
-          placeholder="Nombre del producto"
-          value={deleteProductName}
-          onChange={(e) => setDeleteProductName(e.target.value)}
-        />
-        <button className="small-btn" onClick={handleDeleteProduct} disabled={loading}>
-          Eliminar Producto
-        </button>
-      </div>
+          <div className="search-row">
+            <input
+              list="catalog-products"
+              value={productQuery}
+              onChange={(event) => setProductQuery(event.target.value)}
+              placeholder="Ej: arroz, aceite, atun"
+            />
+            <datalist id="catalog-products">
+              {catalogProducts.map((product) => (
+                <option value={product} key={product} />
+              ))}
+            </datalist>
+            <button onClick={handleCompare} disabled={compareLoading}>
+              {compareLoading ? 'Comparando...' : 'Comparar'}
+            </button>
+          </div>
 
-      {/* SCRAPING MANUAL */}
-      <div className="card">
-        <h2>Scraping manual</h2>
-        <button className="small-btn" onClick={handleScrape} disabled={loading}>
-          Ejecutar Scraping
-        </button>
-      </div>
+          {compareError && <p className="error-line">{compareError}</p>}
 
-      {/* DASHBOARD */}
-      <div className="card">
-        <h2>Dashboard Scrapeado</h2>
-        <button className="small-btn" onClick={handleDashboard} disabled={loading}>
-          Obtener Dashboard
-        </button>
-      </div>
+          {compareMetrics && (
+            <div className="metrics-grid">
+              <div>
+                <span>Mejor precio</span>
+                <strong>{priceLabel(compareMetrics.best)}</strong>
+              </div>
+              <div>
+                <span>Precio más alto</span>
+                <strong>{priceLabel(compareMetrics.worst)}</strong>
+              </div>
+              <div>
+                <span>Ahorro potencial</span>
+                <strong>{priceLabel(compareMetrics.spread)}</strong>
+              </div>
+              <div>
+                <span>Candidatos visibles</span>
+                <strong>{compareMetrics.candidates}</strong>
+              </div>
+            </div>
+          )}
 
-      {/* FILTROS */}
-      <div className="card">
-        <h2>Filtros de Búsqueda</h2>
+          {compareData && (
+            <>
+              <div className="filters-bar">
+                <div className="store-filter">
+                  {availableStores.map((store) => (
+                    <label key={store}>
+                      <input
+                        type="checkbox"
+                        checked={selectedStores.includes(store)}
+                        onChange={() => toggleStore(store)}
+                      />
+                      {store}
+                    </label>
+                  ))}
+                </div>
 
-        {/* Disponibilidad */}
-        <input
-          type="text"
-          placeholder="availability: true/false"
-          value={availability}
-          onChange={(e) => setAvailability(e.target.value)}
-        />
-        <button className="small-btn" onClick={handleSearchAvailability} disabled={loading}>
-          Filtrar por Disponibilidad
-        </button>
+                <input
+                  type="number"
+                  min={0}
+                  value={maxPrice ?? ''}
+                  onChange={(event) => {
+                    const raw = event.target.value
+                    setMaxPrice(raw ? Number(raw) : null)
+                  }}
+                  placeholder="Precio máximo"
+                />
 
-        {/* Query */}
-        <input
-          type="text"
-          placeholder="Query"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-        />
-        <button className="small-btn" onClick={handleSearchQuery} disabled={loading}>
-          Buscar por Query
-        </button>
+                <select value={sortBy} onChange={(event) => setSortBy(event.target.value as 'price' | 'score' | 'unit')}>
+                  <option value="price">Ordenar por precio</option>
+                  <option value="score">Ordenar por score</option>
+                  <option value="unit">Ordenar por precio por unidad</option>
+                </select>
+              </div>
 
-        {/* Tienda */}
-        <input
-          type="text"
-          placeholder="Store Name"
-          value={storeName}
-          onChange={(e) => setStoreName(e.target.value)}
-        />
-        <button className="small-btn" onClick={handleSearchStore} disabled={loading}>
-          Buscar por Tienda
-        </button>
+              <div className="table-shell">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Tienda</th>
+                      <th>Producto homologado</th>
+                      <th>Precio</th>
+                      <th>Presentación</th>
+                      <th>Score</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredRanking.slice(0, 18).map((row) => (
+                      <tr key={row.id}>
+                        <td>{row.storeName}</td>
+                        <td>
+                          <div className="line-name">{row.sourceName}</div>
+                          {row.url && (
+                            <a href={row.url} target="_blank" rel="noreferrer">
+                              ver enlace
+                            </a>
+                          )}
+                        </td>
+                        <td>{priceLabel(row.price)}</td>
+                        <td>{row.presentation?.label || 'N/A'}</td>
+                        <td>{(row.matchScore * 100).toFixed(1)}%</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
+        </article>
 
-        {/* Nombre */}
-        <input
-          type="text"
-          placeholder="Nombre del producto"
-          value={searchName}
-          onChange={(e) => setSearchName(e.target.value)}
-        />
-        <button className="small-btn" onClick={handleSearchName} disabled={loading}>
-          Buscar por Nombre
-        </button>
-      </div>
+        <article className="panel panel-scraping">
+          <h2>Scraping en tiempo real</h2>
+          <p>Dispara actualización y monitorea el estado del job en vivo.</p>
 
-      {/* RESULTADOS */}
-      {(loading || result || error) && (
-        <div className="result-box">
-          {loading && <p>Cargando...</p>}
-          {error && <p className="error">{error}</p>}
-          {result && <pre>{JSON.stringify(result, null, 2)}</pre>}
+          <button onClick={triggerScraping} disabled={scrapeLoading}>
+            {scrapeLoading ? 'Iniciando...' : 'Actualizar precios ahora'}
+          </button>
+          {scrapeError && <p className="error-line">{scrapeError}</p>}
+
+          {scrapeJob && (
+            <div className="job-card">
+              <div className="job-header">
+                <span>Job</span>
+                <strong>{scrapeJob.id}</strong>
+              </div>
+
+              <div className="status-row">
+                <span className={`status-pill ${scrapeJob.status}`}>{scrapeJob.status}</span>
+                <span>{scrapeJob.updated_at ? new Date(scrapeJob.updated_at).toLocaleTimeString() : 'en progreso'}</span>
+              </div>
+
+              <div className="progress-track">
+                <div
+                  className={`progress-fill ${scrapeJob.status}`}
+                  style={{ width: `${progressForStatus(scrapeJob.status)}%` }}
+                />
+              </div>
+
+              {scrapeJob.result && (
+                <ul>
+                  <li>Tiendas procesadas: {(scrapeJob.result.stores_processed || []).join(', ') || 'N/A'}</li>
+                  <li>Productos enviados: {scrapeJob.result.products_sent ?? 0}</li>
+                  <li>Queries: {(scrapeJob.result.queries_processed || []).join(', ') || 'N/A'}</li>
+                </ul>
+              )}
+
+              {scrapeJob.error && <p className="error-line">{scrapeJob.error}</p>}
+            </div>
+          )}
+        </article>
+      </section>
+
+      <section className="panel panel-list">
+        <h2>Lista de compras optimizada</h2>
+        <p>Agrega productos y recibe selección por tienda con total estimado.</p>
+
+        <div className="list-actions">
+          <input
+            list="catalog-products"
+            value={itemsInput}
+            onChange={(event) => setItemsInput(event.target.value)}
+            placeholder="Agregar producto a la lista"
+          />
+          <button onClick={addItem}>Agregar</button>
+          <button
+            className="alt"
+            onClick={() => runOptimize(false)}
+            disabled={items.length === 0 || optimizeLoading}
+          >
+            {optimizeLoading ? 'Optimizando...' : 'Optimizar lista'}
+          </button>
+          <button className="ghost" onClick={() => runOptimize(true)} disabled={optimizeLoading}>
+            Optimizar catálogo completo
+          </button>
         </div>
-      )}
+
+        <div className="chips">
+          {items.map((item) => (
+            <div className="chip" key={item.product}>
+              <strong>{item.product}</strong>
+              <div className="qty-controls">
+                <button onClick={() => changeQuantity(item.product, -1)}>-</button>
+                <span>{item.quantity}</span>
+                <button onClick={() => changeQuantity(item.product, 1)}>+</button>
+              </div>
+              <button className="remove" onClick={() => removeItem(item.product)}>x</button>
+            </div>
+          ))}
+        </div>
+
+        {optimizeError && <p className="error-line">{optimizeError}</p>}
+
+        {optimizeData && (
+          <div className="optimize-grid">
+            <div className="summary-box">
+              <h3>Total estimado</h3>
+              <p>{priceLabel(optimizeData.totalEstimated)}</p>
+              <small>
+                Resueltos {optimizeData.resolvedItems}/{optimizeData.requestedItems}
+              </small>
+            </div>
+
+            <div className="summary-box">
+              <h3>Distribución por tienda</h3>
+              {Object.entries(optimizeData.estimatedByStore).map(([store, value]) => (
+                <div className="store-line" key={store}>
+                  <span>{store}</span>
+                  <strong>{priceLabel(value)}</strong>
+                </div>
+              ))}
+            </div>
+
+            <div className="summary-box full">
+              <h3>Detalle por ítem</h3>
+              {optimizeData.lines.map((line) => (
+                <div className="line-detail" key={line.requested}>
+                  <div>
+                    <strong>{line.requested}</strong>
+                    <small>
+                      {line.selected?.storeName || 'sin coincidencia'} · {line.selected?.sourceName || 'sin opción disponible'}
+                    </small>
+                  </div>
+                  <span>{priceLabel(line.subtotal)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </section>
     </div>
   )
 }
