@@ -6,6 +6,7 @@ from src.clients.product_client import ProductClient
 from src.clients.scraped_client import ScrapedClient
 from src.scrapers.olimpica import scrape_olimpica
 from src.scrapers.exito import scrape_exito
+from src.utils import normalize_name
 
 app = FastAPI(title="Crawler Service")
 
@@ -14,6 +15,18 @@ STORE_SCRAPER_MAPPING = {
     "olimpica": "olimpica",
     "exito": "exito"
 }
+
+
+def _matches_query(product_name: str, query: str) -> bool:
+    """Compara con normalizacion simple y todos los tokens de la query."""
+    normalized_name = normalize_name(product_name)
+    normalized_query = normalize_name(query)
+
+    if not normalized_name or not normalized_query:
+        return False
+
+    query_tokens = [token for token in normalized_query.split(" ") if token]
+    return all(token in normalized_name for token in query_tokens)
 
 @app.post("/crawler/refresh")
 async def refresh_data():
@@ -69,7 +82,7 @@ async def refresh_data():
                 # Filtrar productos por query
                 query_products = [
                     p for p in data["products"] 
-                    if query.lower() in p["name"].lower()
+                    if _matches_query(p["name"], query)
                 ]
                 
                 if query_products:

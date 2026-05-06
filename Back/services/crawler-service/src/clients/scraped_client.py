@@ -21,7 +21,7 @@ class ScrapedClient:
                     json=payload
                 )
                 
-                if response.status_code == 200:
+                if 200 <= response.status_code < 300:
                     return True
                 else:
                     print(f"Error enviando datos a scraped-service: {response.status_code} - {response.text}")

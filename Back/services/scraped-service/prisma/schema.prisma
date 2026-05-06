@@ -17,6 +17,12 @@ model ScrapedProduct {
   availability Boolean?
   scrapedAt    DateTime @default(now())
 
+  @@index([storeName])
+  @@index([query])
+  @@index([name])
+  @@index([scrapedAt])
+  @@index([storeName, query])
+  @@index([query, name])
   @@map("scraped_products")
 }
 
