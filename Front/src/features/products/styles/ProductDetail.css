@@ -229,6 +229,22 @@
   transform: translateY(-1px);
 }
 
+.link-btn.disabled {
+  background: rgba(148, 163, 184, 0.2);
+  color: #546275;
+  cursor: default;
+}
+
+.detail-message {
+  color: var(--text-soft);
+  font-size: 1rem;
+}
+
+.detail-message.error {
+  color: #b91c1c;
+  font-weight: 700;
+}
+
 @media (max-width: 980px) {
   .detail-container {
     grid-template-columns: 1fr;

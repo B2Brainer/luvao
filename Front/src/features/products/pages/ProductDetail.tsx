@@ -1,26 +1,128 @@
-import { useNavigate } from 'react-router-dom'
+import { useEffect, useMemo, useState } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
+import { orchestratorService } from '../../../services/api'
 import '../styles/ProductDetail.css'
 
-const MOCK_PRODUCT_DETAIL = {
-  id: '1',
-  name: 'Arroz 1kg',
-  category: 'Canasta DANE · Cereales y granos',
-  description:
-    'Ficha investigativa de un producto canónico para comparar precio, tendencia y presentación entre supermercados.',
-  prices: [
-    { store: 'D1', price: 1550, date: '2026-05-12', link: 'https://d1.com.co' },
-    { store: 'Olímpica', price: 3800, date: '2026-05-12', link: 'https://olimpica.com' },
-    { store: 'Éxito', price: 42900, date: '2026-05-12', link: 'https://exito.com' },
-  ],
+type CompareRow = {
+  id: string
+  storeName: string
+  sourceName: string
+  price: number | null
+  matchScore: number
+  url?: string | null
+}
+
+type CompareResponse = {
+  product: string
+  ranking: CompareRow[]
+}
+
+type StatsResponse = {
+  overall: {
+    avg: number | null
+    min: number | null
+    max: number | null
+  }
+}
+
+const currency = new Intl.NumberFormat('es-CO', {
+  style: 'currency',
+  currency: 'COP',
+  maximumFractionDigits: 0,
+})
+
+function priceLabel(value: number | null | undefined) {
+  if (value === null || value === undefined) {
+    return 'N/A'
+  }
+  return currency.format(value)
 }
 
 export default function ProductDetail() {
   const nav = useNavigate()
-  const product = MOCK_PRODUCT_DETAIL
+  const { id } = useParams<{ id: string }>()
+  const productQuery = decodeURIComponent(id || '').trim()
 
-  const bestPrice = Math.min(...product.prices.map((p) => p.price))
-  const worstPrice = Math.max(...product.prices.map((p) => p.price))
-  const spread = worstPrice - bestPrice
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [compareData, setCompareData] = useState<CompareResponse | null>(null)
+  const [statsData, setStatsData] = useState<StatsResponse | null>(null)
+
+  useEffect(() => {
+    const loadData = async () => {
+      if (!productQuery) {
+        setError('No se recibió un producto para consultar.')
+        setLoading(false)
+        return
+      }
+
+      setLoading(true)
+      setError('')
+
+      try {
+        const [compareRes, statsRes] = await Promise.all([
+          orchestratorService.compareProduct(productQuery),
+          orchestratorService.getPriceStats({ query: productQuery, days: 7 }),
+        ])
+
+        setCompareData(compareRes.data)
+        setStatsData(statsRes.data)
+      } catch (err: any) {
+        setError(err.response?.data?.message || 'No se pudo cargar la ficha del producto.')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadData()
+  }, [productQuery])
+
+  const ranking = useMemo(() => compareData?.ranking ?? [], [compareData])
+
+  const bestPrice = useMemo(() => {
+    const prices = ranking.map((p) => p.price).filter((p): p is number => p !== null)
+    return prices.length ? Math.min(...prices) : null
+  }, [ranking])
+
+  const worstPrice = useMemo(() => {
+    const prices = ranking.map((p) => p.price).filter((p): p is number => p !== null)
+    return prices.length ? Math.max(...prices) : null
+  }, [ranking])
+
+  const spread = useMemo(() => {
+    if (bestPrice === null || worstPrice === null) {
+      return null
+    }
+    return worstPrice - bestPrice
+  }, [bestPrice, worstPrice])
+
+  if (loading) {
+    return (
+      <div className="product-detail-page">
+        <button className="back-btn" onClick={() => nav('/products')}>
+          ← Volver al panel
+        </button>
+        <section className="detail-container">
+          <p className="detail-message">Cargando información del producto...</p>
+        </section>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="product-detail-page">
+        <button className="back-btn" onClick={() => nav('/products')}>
+          ← Volver al panel
+        </button>
+        <section className="detail-container">
+          <p className="detail-message error">{error}</p>
+        </section>
+      </div>
+    )
+  }
+
+  const productName = compareData?.product || productQuery
 
   return (
     <div className="product-detail-page">
@@ -39,19 +141,31 @@ export default function ProductDetail() {
 
         <div className="detail-info">
           <span className="detail-kicker">Resultado investigativo</span>
-          <h1>{product.name}</h1>
-          <p className="category">{product.category}</p>
-          <p className="description">{product.description}</p>
+          <h1>{productName}</h1>
+          <p className="category">Canasta DANE · Comparación multi-tienda</p>
+          <p className="description">
+            Ficha investigativa basada en datos reales del backend para analizar precio, variación y coincidencia semántica por supermercado.
+          </p>
 
           <div className="detail-grid">
             <div className="best-price">
               <span>Mejor precio</span>
-              <p className="price">{bestPrice.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })}</p>
+              <p className="price">{priceLabel(bestPrice)}</p>
             </div>
 
             <div className="best-price muted">
               <span>Diferencia máxima</span>
-              <p className="price">{spread.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })}</p>
+              <p className="price">{priceLabel(spread)}</p>
+            </div>
+
+            <div className="best-price">
+              <span>Promedio 7 días</span>
+              <p className="price">{priceLabel(statsData?.overall?.avg)}</p>
+            </div>
+
+            <div className="best-price muted">
+              <span>Registros comparados</span>
+              <p className="price">{ranking.length}</p>
             </div>
           </div>
 
@@ -61,21 +175,26 @@ export default function ProductDetail() {
               <span>actualización reciente</span>
             </div>
 
-            {product.prices.map((p) => {
-              const width = Math.max(18, (bestPrice / p.price) * 100)
+            {ranking.slice(0, 14).map((p) => {
+              const safePrice = p.price ?? 0
+              const width = bestPrice && safePrice > 0 ? Math.max(18, (bestPrice / safePrice) * 100) : 18
               return (
-                <div key={p.store} className="price-row">
+                <div key={p.id} className="price-row">
                   <div>
-                    <span className="store-name">{p.store}</span>
-                    <span className="date">{p.date}</span>
+                    <span className="store-name">{p.storeName}</span>
+                    <span className="date">Score: {(p.matchScore * 100).toFixed(1)}%</span>
                   </div>
                   <div className="price-track">
                     <div className="price-fill" style={{ width: `${width}%` }} />
                   </div>
-                  <span className="price">{p.price.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })}</span>
-                  <a href={p.link} target="_blank" rel="noopener noreferrer" className="link-btn">
-                    Ver
-                  </a>
+                  <span className="price">{priceLabel(p.price)}</span>
+                  {p.url ? (
+                    <a href={p.url} target="_blank" rel="noopener noreferrer" className="link-btn">
+                      Ver
+                    </a>
+                  ) : (
+                    <span className="link-btn disabled">N/A</span>
+                  )}
                 </div>
               )
             })}

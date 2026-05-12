@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { orchestratorService } from '../../../services/api'
 import '../styles/Products.css'
 
@@ -477,7 +478,14 @@ function Products() {
           <section className="panel-block">
             <div className="panel-head">
               <h2>Resultados de comparación</h2>
-              <p>Filtra por tienda, límite de precio y orden de análisis.</p>
+              <div className="panel-head-actions">
+                <p>Filtra por tienda, límite de precio y orden de análisis.</p>
+                {compareData && (
+                  <Link to={`/products/${encodeURIComponent(compareData.product)}`} className="detail-link">
+                    Ver ficha del producto
+                  </Link>
+                )}
+              </div>
             </div>
 
             {compareError && <p className="error-line">{compareError}</p>}
