@@ -1,18 +1,22 @@
 import asyncio
 import re
-import time
-from urllib.parse import quote
 from typing import Optional
+from urllib.parse import quote
 
 import httpx
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import WebDriverWait
 
-from src.scrapers.common import build_product_record, dedupe_products, product_identity
+from src.scrapers.common import (
+    build_product_record,
+    dedupe_products,
+    is_relevant_for_query,
+    product_identity,
+)
 
 BASE_URL = "https://domicilios.tiendasd1.com/search?name="
 MAX_RETRIES = 3
@@ -37,7 +41,7 @@ def _fetch_query_html(query: str) -> str:
         return response.text
 
 
-def _extract_products_from_html(html_text: str) -> list[dict]:
+def _extract_products_from_html(html_text: str, query: str | None = None) -> list[dict]:
     products: list[dict] = []
     pattern = re.compile(
         r'([a-z0-9]+):T[0-9a-z]+,\\u003cbody\\u003e(.*?)\\"__typename\\":\\"CatalogProductModel\\"',
@@ -58,6 +62,9 @@ def _extract_products_from_html(html_text: str) -> list[dict]:
         sku_match = re.search(r'"sku":"([^"]+)"', block)
 
         if not product_name:
+            continue
+
+        if query and not is_relevant_for_query(query, product_name):
             continue
 
         product = build_product_record(
@@ -88,7 +95,7 @@ def _extract_product_name(block: str) -> str | None:
 
 
 def _sanitize_product_name(name: str) -> str:
-    cleaned = re.sub(r'\"]\)\s*<\/script>.*$', '', name, flags=re.S)
+    cleaned = re.sub(r'\"]\)\s*</script>.*$', '', name, flags=re.S)
     cleaned = re.sub(r'^Nombre del Producto:\s*', '', cleaned, flags=re.I)
     cleaned = re.sub(r'^Nombre del producto:\s*', '', cleaned, flags=re.I)
     return " ".join(cleaned.split()).strip()
@@ -125,7 +132,7 @@ def _build_driver() -> webdriver.Chrome:
 def _scrape_query_sync(query: str) -> list[dict]:
     try:
         html_text = _fetch_query_html(query)
-        products = _extract_products_from_html(html_text)
+        products = _extract_products_from_html(html_text, query=query)
         if products:
             return products
     except Exception:
@@ -148,8 +155,11 @@ def _scrape_query_sync(query: str) -> list[dict]:
             if not text:
                 continue
 
-            price = _extract_price(text)
             cleaned_name = re.sub(r"^\W+", "", text).strip()
+            if cleaned_name and not is_relevant_for_query(query, cleaned_name):
+                continue
+
+            price = _extract_price(text)
             if cleaned_name:
                 product = build_product_record(cleaned_name, price, href)
                 if product is None:

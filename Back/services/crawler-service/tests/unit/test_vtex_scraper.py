@@ -80,12 +80,10 @@ def test_scrape_vtex_queries_pages_until_results_are_exhausted():
 
     assert [product["name"] for product in products] == [
         "Aceite de Cocina Premium",
-        "Vinagre Blanco",
         "Aceite de Girasol",
     ]
-    assert [product["price"] for product in products] == [18900.0, 5400.0, 21000.0]
+    assert [product["price"] for product in products] == [18900.0, 21000.0]
     assert [product["url"] for product in products] == [
         "https://example.com/1",
-        "https://example.com/2",
         "https://example.com/3",
     ]

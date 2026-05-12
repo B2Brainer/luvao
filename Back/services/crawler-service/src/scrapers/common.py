@@ -1,3 +1,7 @@
+import re
+from unicodedata import normalize
+
+
 def build_product_record(name: str, price: float | int | None = None, url: str | None = None) -> dict | None:
     cleaned_name = " ".join((name or "").split()).strip()
     if not cleaned_name:
@@ -29,3 +33,163 @@ def dedupe_products(products: list[dict]) -> list[dict]:
         unique_products.append(product)
 
     return unique_products
+
+
+def normalize_text(value: str) -> str:
+    normalized = normalize("NFD", value.lower())
+    without_marks = "".join(char for char in normalized if ord(char) < 128)
+    return re.sub(r"\s+", " ", re.sub(r"[^a-z0-9\s]", " ", without_marks)).strip()
+
+
+def text_tokens(value: str) -> set[str]:
+    normalized = normalize_text(value)
+    if not normalized:
+        return set()
+    return {token for token in normalized.split(" ") if token}
+
+
+_BASKET_QUERIES = {"arroz", "aceite", "leche", "huevos", "huevo", "azucar", "cafe"}
+
+_GENERIC_NON_FOOD_STEMS = [
+    "organizador",
+    "dispensador",
+    "rociador",
+    "spray",
+    "freidora",
+    "hervidor",
+    "cocedor",
+    "batidor",
+    "batidora",
+    "espumador",
+    "extractor",
+    "maquina",
+    "juguet",
+    "didactic",
+    "decorativ",
+    "bloqueador",
+    "serun",
+    "corporal",
+    "capilar",
+    "usb",
+    "llanta",
+    "cafetera",
+    "glucometro",
+    "soporte",
+    "molde",
+    "sarten",
+    "olla",
+    "recolectora",
+    "pascua",
+]
+
+_OIL_EXCLUDE_TOKENS = {
+    "atun",
+    "motor",
+    "motocicleta",
+    "moto",
+    "automotriz",
+    "lubricante",
+    "lubricantes",
+    "transmision",
+    "diesel",
+    "gasolina",
+    "filtro",
+    "hidraulico",
+    "masajes",
+    "esencial",
+    "2t",
+    "husqvarna",
+}
+
+
+_OIL_NON_FOOD_STEMS = [
+    "limpiador",
+    "facial",
+    "hidrat",
+    "pore",
+    "skin",
+    "ginseng",
+    "beauty",
+    "masaje",
+    "masajes",
+    "capilar",
+    "bronceador",
+    "aditivo",
+    "automotr",
+    "lubric",
+]
+
+_EGG_FOOD_SIGNALS = {
+    "und",
+    "unidad",
+    "unidades",
+    "docena",
+    "rojo",
+    "blanco",
+    "codorniz",
+    "organico",
+    "campesino",
+    "aa",
+    "a",
+}
+
+_EGG_EXCLUDE_TOKENS = {
+    "kinder",
+    "chocolate",
+    "hatchimals",
+    "shaker",
+}
+
+
+def _has_non_food_signal(normalized_name: str) -> bool:
+    return any(stem in normalized_name for stem in _GENERIC_NON_FOOD_STEMS)
+
+
+def is_relevant_for_query(query: str, product_name: str) -> bool:
+    query_norm = normalize_text(query)
+    normalized_name = normalize_text(product_name)
+    name_tokens = text_tokens(product_name)
+
+    if not query_norm:
+        return True
+
+    if query_norm not in _BASKET_QUERIES:
+        query_tokens = text_tokens(query_norm)
+        return bool(query_tokens & name_tokens)
+
+    if not normalized_name:
+        return False
+
+    if _has_non_food_signal(normalized_name):
+        return False
+
+    if query_norm in {"huevo", "huevos"}:
+        if not ({"huevo", "huevos"} & name_tokens):
+            return False
+        if _EGG_EXCLUDE_TOKENS & name_tokens:
+            return False
+        return bool(_EGG_FOOD_SIGNALS & name_tokens)
+
+    if query_norm == "aceite":
+        if "aceite" not in name_tokens:
+            return False
+        if _OIL_EXCLUDE_TOKENS & name_tokens:
+            return False
+        if any(stem in normalized_name for stem in _OIL_NON_FOOD_STEMS):
+            return False
+        return True
+
+    if query_norm == "arroz":
+        return "arroz" in name_tokens
+
+    if query_norm == "leche":
+        return "leche" in name_tokens
+
+    if query_norm == "azucar":
+        return "azucar" in name_tokens
+
+    if query_norm == "cafe":
+        return "cafe" in name_tokens
+
+    query_tokens = text_tokens(query_norm)
+    return bool(query_tokens & name_tokens)

@@ -3,13 +3,46 @@ from urllib.parse import quote
 
 import httpx
 
-from src.scrapers.common import build_product_record, dedupe_products, product_identity
+from src.scrapers.common import (
+    build_product_record,
+    dedupe_products,
+    is_relevant_for_query,
+    normalize_text,
+    product_identity,
+)
 
 DEFAULT_PAGE_SIZE = 10
 DEFAULT_MAX_PAGES = 25
 DEFAULT_TIMEOUT = 20.0
 MAX_RETRIES = 3
 RETRY_BACKOFF_SECONDS = 1
+
+
+_FOOD_CATEGORY_HINTS = [
+    "supermercado",
+    "mercado",
+    "despensa",
+    "alimentos",
+    "lacte",
+    "huevo",
+    "cafe",
+    "granos",
+    "arroz",
+    "vinagres",
+    "azucar",
+    "bebidas",
+    "proteina",
+]
+
+_QUERY_CATEGORY_HINTS = {
+    "arroz": ["arroz", "granos", "despensa", "supermercado", "mercado"],
+    "aceite": ["aceites y vinagres", "despensa", "supermercado", "mercado"],
+    "leche": ["lacte", "leche", "despensa", "supermercado", "mercado"],
+    "huevo": ["huevo", "proteina", "despensa", "supermercado", "mercado"],
+    "huevos": ["huevo", "proteina", "despensa", "supermercado", "mercado"],
+    "azucar": ["azucar", "despensa", "supermercado", "mercado"],
+    "cafe": ["cafe", "bebidas", "despensa", "supermercado", "mercado"],
+}
 
 
 def _build_request(base_url: str, query: str, offset: int, page_size: int) -> tuple[str, dict[str, int]]:
@@ -47,6 +80,38 @@ def _extract_product(item: dict) -> dict | None:
     return build_product_record(name, _extract_price(item), url)
 
 
+
+
+def _query_terms(query: str) -> list[str]:
+    normalized = normalize_text(query)
+
+    if normalized in {"huevos", "huevo"}:
+        return [query, "huevo", "huevos"]
+
+    if normalized == "cafe":
+        return [query, "cafe", "nescafe", "colcafe"]
+
+    return [query]
+
+def _is_category_relevant(query: str, item: dict) -> bool:
+    categories = item.get("categories") or []
+    if not isinstance(categories, list) or not categories:
+        return True
+
+    category_text = normalize_text(" ".join(str(cat) for cat in categories))
+    if not category_text:
+        return True
+
+    query_norm = normalize_text(query)
+    if query_norm not in _QUERY_CATEGORY_HINTS:
+        return True
+
+    if not any(hint in category_text for hint in _FOOD_CATEGORY_HINTS):
+        return False
+
+    return any(hint in category_text for hint in _QUERY_CATEGORY_HINTS[query_norm])
+
+
 async def scrape_vtex_queries(
     base_url: str,
     queries: list[str],
@@ -61,51 +126,68 @@ async def scrape_vtex_queries(
     async with client_factory(timeout=DEFAULT_TIMEOUT, follow_redirects=True, headers=headers or {}) as client:
         for query in queries:
             seen_ids: set[str] = set()
-            offset = 0
+            seen_catalog_ids: set[str] = set()
 
-            for _ in range(max_pages):
-                data = None
+            for search_term in _query_terms(query):
+                offset = 0
 
-                for attempt in range(1, MAX_RETRIES + 1):
-                    try:
-                        url, params = _build_request(base_url, query, offset, page_size)
-                        response = await client.get(url, params=params)
-                        response.raise_for_status()
-                        data = response.json()
+                for _ in range(max_pages):
+                    data = None
+
+                    for attempt in range(1, MAX_RETRIES + 1):
+                        try:
+                            url, params = _build_request(base_url, search_term, offset, page_size)
+                            response = await client.get(url, params=params)
+                            response.raise_for_status()
+                            data = response.json()
+                            break
+                        except httpx.HTTPStatusError as exc:
+                            print(
+                                f"❌ Error HTTP {exc.response.status_code} en query={search_term}, intento {attempt}/{MAX_RETRIES}"
+                            )
+                        except Exception as exc:
+                            print(f"❌ Error en query={search_term}, intento {attempt}/{MAX_RETRIES}: {exc}")
+
+                        if attempt < MAX_RETRIES:
+                            await asyncio.sleep(RETRY_BACKOFF_SECONDS * attempt)
+
+                    if not data or not isinstance(data, list):
                         break
-                    except httpx.HTTPStatusError as exc:
-                        print(
-                            f"❌ Error HTTP {exc.response.status_code} en query={query}, intento {attempt}/{MAX_RETRIES}"
-                        )
-                    except Exception as exc:
-                        print(f"❌ Error en query={query}, intento {attempt}/{MAX_RETRIES}: {exc}")
 
-                    if attempt < MAX_RETRIES:
-                        await asyncio.sleep(RETRY_BACKOFF_SECONDS * attempt)
+                    page_added = 0
+                    catalog_added = 0
+                    for item in data:
+                        if not isinstance(item, dict):
+                            continue
 
-                if not data or not isinstance(data, list):
-                    break
+                        catalog_id = str(item.get("productId") or item.get("link") or item.get("productName") or "").strip().lower()
+                        if catalog_id and catalog_id in seen_catalog_ids:
+                            continue
+                        if catalog_id:
+                            seen_catalog_ids.add(catalog_id)
+                            catalog_added += 1
 
-                page_added = 0
-                for item in data:
-                    if not isinstance(item, dict):
-                        continue
+                        if not _is_category_relevant(query, item):
+                            continue
 
-                    product = _extract_product(item)
-                    if product is None:
-                        continue
+                        product = _extract_product(item)
+                        if product is None:
+                            continue
 
-                    product_id = str(item.get("productId") or product_identity(product)).strip().lower()
-                    if product_id in seen_ids:
-                        continue
+                        if not is_relevant_for_query(query, product.get("name", "")):
+                            continue
 
-                    seen_ids.add(product_id)
-                    products.append(product)
-                    page_added += 1
+                        product_id = str(item.get("productId") or product_identity(product)).strip().lower()
+                        if product_id in seen_ids:
+                            continue
 
-                if page_added == 0:
-                    break
+                        seen_ids.add(product_id)
+                        products.append(product)
+                        page_added += 1
 
-                offset += page_size
+                    if catalog_added == 0 and page_added == 0:
+                        break
+
+                    offset += page_size
 
     return dedupe_products(products)
