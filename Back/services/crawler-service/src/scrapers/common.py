@@ -80,6 +80,14 @@ _GENERIC_NON_FOOD_STEMS = [
     "olla",
     "recolectora",
     "pascua",
+    "caramelo",
+    "chocolat",
+    "galleta",
+    "mango",
+    "aguardiente",
+    "bebida",
+    "gaseosa",
+    "refresco",
 ]
 
 _OIL_EXCLUDE_TOKENS = {
@@ -117,6 +125,62 @@ _OIL_NON_FOOD_STEMS = [
     "aditivo",
     "automotr",
     "lubric",
+    "little angels",
+    "bebe",
+    "baby",
+]
+
+_MILK_KEEP_STEMS = [
+    "leche entera",
+    "leche semidescremada",
+    "leche descremada",
+    "leche deslactosada",
+    "leche uht",
+    "leche larga vida",
+    "leche en polvo",
+    "leche evaporada",
+]
+
+_MILK_EXCLUDE_STEMS = [
+    "crema de leche",
+    "dulce de leche",
+    "leche asada",
+    "leche condensada",
+    "leche de coco",
+    "leche coco",
+    "sabor a leche",
+    "fresa leche",
+    "mora leche",
+    "chocolate",
+    "choc",
+    "chocolatina",
+    "galleta",
+    "caramelo",
+    "flan",
+    "cortadito",
+    "postre",
+]
+
+_SUGAR_EXCLUDE_STEMS = [
+    "sin azucar",
+    "0 azucar",
+    "mango",
+    "aguardiente",
+    "bebida",
+    "galleta",
+    "caramelo",
+    "palito",
+    "pan ",
+    "endulzado",
+]
+
+_COFFEE_EXCLUDE_STEMS = [
+    "galleta",
+    "cafecitas",
+    "dulce",
+    "chocolate",
+    "sabor cafe",
+    "licor",
 ]
 
 _EGG_FOOD_SIGNALS = {
@@ -183,12 +247,20 @@ def is_relevant_for_query(query: str, product_name: str) -> bool:
         return "arroz" in name_tokens
 
     if query_norm == "leche":
+        if any(stem in normalized_name for stem in _MILK_EXCLUDE_STEMS):
+            return False
+        if any(stem in normalized_name for stem in _MILK_KEEP_STEMS):
+            return True
         return "leche" in name_tokens
 
     if query_norm == "azucar":
+        if any(stem in normalized_name for stem in _SUGAR_EXCLUDE_STEMS):
+            return False
         return "azucar" in name_tokens
 
     if query_norm == "cafe":
+        if any(stem in normalized_name for stem in _COFFEE_EXCLUDE_STEMS):
+            return False
         return "cafe" in name_tokens
 
     query_tokens = text_tokens(query_norm)

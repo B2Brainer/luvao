@@ -6,18 +6,11 @@ from src.clients.store_client import StoreClient
 from src.scrapers.d1 import scrape_d1
 from src.scrapers.exito import scrape_exito
 from src.scrapers.olimpica import scrape_olimpica
-from src.utils import normalize_name
+from src.scrapers.common import is_relevant_for_query
 
 
 def _matches_query(product_name: str, query: str) -> bool:
-    normalized_name = normalize_name(product_name)
-    normalized_query = normalize_name(query)
-
-    if not normalized_name or not normalized_query:
-        return False
-
-    query_tokens = [token for token in normalized_query.split(" ") if token]
-    return all(token in normalized_name for token in query_tokens)
+    return is_relevant_for_query(query, product_name)
 
 
 async def process_refresh() -> dict:

@@ -19,3 +19,20 @@ def test_huevos_excludes_kitchen_tools_and_toys():
 def test_huevos_keeps_edible_products():
     assert is_relevant_for_query("huevos", "Huevos AA rojos x 12 und") is True
     assert is_relevant_for_query("huevos", "Huevo codorniz fresco x 24 unidades") is True
+
+
+def test_basket_queries_handle_accents_and_singular_plural():
+    assert is_relevant_for_query("cafe", "Café Sello Rojo Tradicional 250 G") is True
+    assert is_relevant_for_query("azucar", "Azúcar Blanca 1000 g") is True
+    assert is_relevant_for_query("huevos", "Huevo Tipo A Sol Naciente 30 Und") is True
+
+
+def test_basket_queries_exclude_common_search_noise():
+    assert is_relevant_for_query("azucar", "Mango Azúcar") is False
+    assert is_relevant_for_query("azucar", "Bebida de Almendra Sin Azúcar 1000 mL") is False
+    assert is_relevant_for_query("azucar", "Pan Multigranos Natri 0 Azúcar 450g") is False
+    assert is_relevant_for_query("leche", "Caramelos sabores a mora leche fresa leche") is False
+    assert is_relevant_for_query("leche", "Chocolate Milka Leche 80 G") is False
+    assert is_relevant_for_query("leche", "Flan de Leche 200 G") is False
+    assert is_relevant_for_query("leche", "Leche Condensada Doypack Latti 300 Grs") is False
+    assert is_relevant_for_query("cafe", "Galleta Café Quindío Cafecitas con Café 280 G") is False
