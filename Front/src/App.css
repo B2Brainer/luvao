@@ -17,7 +17,10 @@ body {
 .app-background {
   width: 100vw;
   height: 100vh;
-  background: linear-gradient(135deg, #13283b 0%, #175153 52%, #1f6b51 100%);
+  background:
+    radial-gradient(circle at 20% 20%, rgba(34, 197, 94, 0.20), transparent 24%),
+    radial-gradient(circle at 82% 14%, rgba(37, 99, 235, 0.22), transparent 24%),
+    linear-gradient(135deg, #0d1b3d 0%, #102455 50%, #145a4b 100%);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -28,9 +31,9 @@ body {
   min-height: 100vh;
   width: 100%;
   background:
-    radial-gradient(circle at 14% 10%, #ffe8b7 0%, transparent 28%),
-    radial-gradient(circle at 88% 12%, #dff4f0 0%, transparent 30%),
-    linear-gradient(180deg, #fdf6eb 0%, #f5f6fb 48%, #f3fbf6 100%);
+    radial-gradient(circle at 12% 10%, rgba(34, 197, 94, 0.10) 0%, transparent 28%),
+    radial-gradient(circle at 88% 8%, rgba(37, 99, 235, 0.10) 0%, transparent 24%),
+    linear-gradient(180deg, rgba(247, 250, 252, 0.92) 0%, rgba(241, 246, 251, 0.88) 52%, rgba(235, 242, 239, 0.94) 100%);
   padding: 1rem;
 }
 

@@ -454,13 +454,15 @@ export class ComparisonService {
     return NON_GROCERY_STEMS.some((stem) => token.includes(stem));
   }
 
-  private async getDefaultResearchBasket(): Promise<ShoppingItem[]> {
+  private async getDefaultResearchBasket(): Promise<ResearchBasketItem[]> {
     try {
       const basket = await this.productClient.getDaneFamilyBasket();
       if (Array.isArray(basket) && basket.length > 0) {
         return basket.map((item: ResearchBasketItem) => ({
           product: item.product,
           quantity: item.quantity > 0 ? item.quantity : 1,
+          category: item.category,
+          unit: item.unit,
         }));
       }
     } catch {

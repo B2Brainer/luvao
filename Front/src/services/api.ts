@@ -41,6 +41,15 @@ export const orchestratorService = {
   getDashboard: () =>
     api.get('/orchestrator/dashboard'),
 
+  getPriceStats: (filters: { query?: string; storeName?: string; days?: number } = {}) =>
+    api.get('/orchestrator/stats/price', { params: filters }),
+
+  getPriceSeries: (filters: { query?: string; storeName?: string; days?: number } = {}) =>
+    api.get('/orchestrator/stats/price-series', { params: filters }),
+
+  getResearchBasket: () =>
+    api.get('/orchestrator/research/dane-basket'),
+
   // ----- SEARCH FILTERS -----
 
   // /search/availability?availability=true

@@ -36,8 +36,25 @@ export function Auth() {
 
   return (
     <div className="auth-container">
+      <div className="auth-hero">
+        <img src="/brand/logo-paleta.png" alt="Luvao" className="auth-logo" />
+        <h1>Comparar precios con base en la canasta DANE.</h1>
+        <p>
+          Una interfaz limpia para investigar el mercado, leer variaciones de precio y presentar resultados con claridad.
+        </p>
+        <div className="auth-pills">
+          <span>Investigación</span>
+          <span>Estadística descriptiva</span>
+          <span>Comparación real</span>
+        </div>
+      </div>
+
       <div className="auth-box">
-        <h2>{isLogin ? 'Login' : 'Registro'}</h2>
+        <div className="auth-copy">
+          <span className="auth-kicker">Acceso seguro</span>
+          <h2>{isLogin ? 'Entrar al panel' : 'Crear cuenta'}</h2>
+          <p>{isLogin ? 'Ingresa para revisar comparativas, canasta DANE y estadísticas del mercado.' : 'Regístrate para trabajar sobre el panel de análisis.'}</p>
+        </div>
 
         <form onSubmit={handleSubmit}>
           {!isLogin && (
@@ -54,7 +71,7 @@ export function Auth() {
 
           <input
             type="email"
-            placeholder="Email"
+            placeholder="Correo electrónico"
             value={email}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
               setEmail(e.target.value)
@@ -76,21 +93,21 @@ export function Auth() {
             {loading
               ? 'Cargando...'
               : isLogin
-              ? 'Login'
+              ? 'Entrar'
               : 'Registrarse'}
           </button>
         </form>
 
         {error && <p className="error">{error}</p>}
 
-        <p>
+        <p className="toggle-copy">
           {isLogin ? '¿No tienes cuenta?' : '¿Ya tienes cuenta?'}
           <button
             type="button"
             onClick={() => setIsLogin(!isLogin)}
             className="toggle-btn"
           >
-            {isLogin ? 'Registrarse' : 'Login'}
+            {isLogin ? 'Registrarse' : 'Entrar'}
           </button>
         </p>
       </div>

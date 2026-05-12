@@ -17,8 +17,11 @@ body {
   font-family: 'IBM Plex Sans', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background: transparent;
-  color: #1f2a38;
+  background:
+    radial-gradient(circle at top left, rgba(34, 197, 94, 0.08), transparent 28%),
+    radial-gradient(circle at top right, rgba(37, 99, 235, 0.10), transparent 24%),
+    linear-gradient(180deg, #f7fafc 0%, #f3f6fb 52%, #eef4f1 100%);
+  color: #17212e;
 }
 
 :root {
@@ -27,6 +30,17 @@ body {
   color-scheme: light;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
+  --navy-950: #0d1b3d;
+  --navy-900: #102455;
+  --green-500: #22c55e;
+  --green-200: #dff8e8;
+  --blue-500: #2563eb;
+  --surface: rgba(255, 255, 255, 0.78);
+  --surface-strong: #ffffff;
+  --border: rgba(14, 23, 46, 0.08);
+  --text-strong: #142033;
+  --text-soft: #526173;
+  --shadow: 0 24px 60px -36px rgba(17, 28, 47, 0.4);
 }
 
 h1,
@@ -40,10 +54,10 @@ h6 {
 
 a {
   font-weight: 500;
-  color: #0f4c81;
+  color: var(--blue-500);
   text-decoration: inherit;
 }
 
 a:hover {
-  color: #083053;
+  color: var(--navy-900);
 }
