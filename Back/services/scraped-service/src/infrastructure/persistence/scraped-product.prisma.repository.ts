@@ -2,6 +2,8 @@
 import { Injectable } from '@nestjs/common';
 import {
   DescriptiveStats,
+  DailyPricePoint,
+  PriceSeriesResponse,
   PriceStatsFilters,
   PriceStatsResponse,
   ScrapedProductRepositoryPort,
@@ -122,6 +124,87 @@ export class ScrapedProductPrismaRepository implements ScrapedProductRepositoryP
     };
   }
 
+  async getPriceSeries(filters: PriceStatsFilters): Promise<PriceSeriesResponse> {
+    const days = Number.isFinite(filters.days) && (filters.days as number) > 0
+      ? Math.floor(filters.days as number)
+      : 7;
+
+    const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+    const where: any = {
+      scrapedAt: { gte: since },
+    };
+
+    if (filters.storeName) {
+      where.storeName = { contains: filters.storeName, mode: 'insensitive' };
+    }
+
+    if (filters.query) {
+      where.query = { contains: filters.query, mode: 'insensitive' };
+    }
+
+    const rows = await this.prisma.scrapedProductHistory.findMany({
+      where,
+      select: {
+        storeName: true,
+        query: true,
+        price: true,
+        scrapedAt: true,
+      },
+      orderBy: { scrapedAt: 'asc' },
+    });
+
+    const validRows = rows.filter((row) => row.price !== null && row.price > 0) as Array<{
+      storeName: string;
+      query: string;
+      price: number;
+      scrapedAt: Date;
+    }>;
+
+    const overallByDate = new Map<string, number[]>();
+    const storeDateMap = new Map<string, Map<string, number[]>>();
+    const queryDateMap = new Map<string, Map<string, number[]>>();
+
+    for (const row of validRows) {
+      const dateKey = row.scrapedAt.toISOString().slice(0, 10);
+
+      const overallPrices = overallByDate.get(dateKey) ?? [];
+      overallPrices.push(row.price);
+      overallByDate.set(dateKey, overallPrices);
+
+      const storeMap = storeDateMap.get(row.storeName) ?? new Map<string, number[]>();
+      const storePrices = storeMap.get(dateKey) ?? [];
+      storePrices.push(row.price);
+      storeMap.set(dateKey, storePrices);
+      storeDateMap.set(row.storeName, storeMap);
+
+      const queryMap = queryDateMap.get(row.query) ?? new Map<string, number[]>();
+      const queryPrices = queryMap.get(dateKey) ?? [];
+      queryPrices.push(row.price);
+      queryMap.set(dateKey, queryPrices);
+      queryDateMap.set(row.query, queryMap);
+    }
+
+    return {
+      windowDays: days,
+      since: since.toISOString(),
+      totalRecords: validRows.length,
+      overallDaily: this.toDailySeries(overallByDate),
+      byStore: [...storeDateMap.entries()]
+        .map(([storeName, dateMap]) => ({
+          storeName,
+          series: this.toDailySeries(dateMap),
+        }))
+        .sort((a, b) => this.seriesCount(b.series) - this.seriesCount(a.series)),
+      byQuery: [...queryDateMap.entries()]
+        .map(([query, dateMap]) => ({
+          query,
+          series: this.toDailySeries(dateMap),
+        }))
+        .sort((a, b) => this.seriesCount(b.series) - this.seriesCount(a.series)),
+    };
+  }
+
   private calculateStats(prices: number[]): DescriptiveStats {
     if (prices.length === 0) {
       return {
@@ -150,6 +233,19 @@ export class ScrapedProductPrismaRepository implements ScrapedProductRepositoryP
       stdDev: Number(stdDev.toFixed(2)),
       cv: cv === null ? null : Number(cv.toFixed(4)),
     };
+  }
+
+  private toDailySeries(dateMap: Map<string, number[]>): DailyPricePoint[] {
+    return [...dateMap.entries()]
+      .map(([date, prices]) => ({
+        date,
+        stats: this.calculateStats(prices),
+      }))
+      .sort((a, b) => a.date.localeCompare(b.date));
+  }
+
+  private seriesCount(series: DailyPricePoint[]): number {
+    return series.reduce((acc, point) => acc + point.stats.count, 0);
   }
 
   async update(product: ScrapedProduct): Promise<ScrapedProduct> {

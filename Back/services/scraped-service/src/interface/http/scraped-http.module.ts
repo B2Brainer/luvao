@@ -14,6 +14,7 @@ import { SearchScrapedProductsByNameUseCase } from '../../application/use-cases/
 import { SearchScrapedProductsByAvailabilityUseCase } from '../../application/use-cases/search-scraped-products-by-availability.usecase';
 import { SearchScrapedProductsByFiltersUseCase } from '../../application/use-cases/search-scraped-products-by-filters.usecase';
 import { GetScrapedPriceStatsUseCase } from '../../application/use-cases/get-scraped-price-stats.usecase';
+import { GetScrapedPriceSeriesUseCase } from '../../application/use-cases/get-scraped-price-series.usecase';
 import { PrismaService } from '../../infrastructure/prisma/prisma.service';
 import { PrismaModule } from '../../infrastructure/prisma/prisma.module';
 
@@ -81,6 +82,11 @@ import { PrismaModule } from '../../infrastructure/prisma/prisma.module';
     {
       provide: GetScrapedPriceStatsUseCase,
       useFactory: (repo) => new GetScrapedPriceStatsUseCase(repo),
+      inject: [SCRAPED_REPOSITORY],
+    },
+    {
+      provide: GetScrapedPriceSeriesUseCase,
+      useFactory: (repo) => new GetScrapedPriceSeriesUseCase(repo),
       inject: [SCRAPED_REPOSITORY],
     },
   ],

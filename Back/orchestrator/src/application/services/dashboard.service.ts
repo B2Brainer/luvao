@@ -41,4 +41,8 @@ export class DashboardService {
   async getPriceStats(filters: { query?: string; storeName?: string; days?: number }) {
     return await this.scrapedClient.getPriceStats(filters);
   }
+
+  async getPriceSeries(filters: { query?: string; storeName?: string; days?: number }) {
+    return await this.scrapedClient.getPriceSeries(filters);
+  }
 }

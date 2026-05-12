@@ -25,6 +25,20 @@ export type PriceStatsResponse = {
   byQuery: Array<{ query: string; stats: DescriptiveStats }>;
 };
 
+export type DailyPricePoint = {
+  date: string;
+  stats: DescriptiveStats;
+};
+
+export type PriceSeriesResponse = {
+  windowDays: number;
+  since: string;
+  totalRecords: number;
+  overallDaily: DailyPricePoint[];
+  byStore: Array<{ storeName: string; series: DailyPricePoint[] }>;
+  byQuery: Array<{ query: string; series: DailyPricePoint[] }>;
+};
+
 export interface ScrapedProductRepositoryPort {
   bulkReplace(storeName: string, query: string, products: ScrapedProduct[]): Promise<void>;
   update(product: ScrapedProduct): Promise<ScrapedProduct>;
@@ -35,5 +49,6 @@ export interface ScrapedProductRepositoryPort {
   findByFilters(filters: { storeName?: string; query?: string; name?: string; availability?: boolean; }): Promise<ScrapedProduct[]>;
 
   getPriceStats(filters: PriceStatsFilters): Promise<PriceStatsResponse>;
+  getPriceSeries(filters: PriceStatsFilters): Promise<PriceSeriesResponse>;
   exists(id: string): Promise<boolean>;
 }

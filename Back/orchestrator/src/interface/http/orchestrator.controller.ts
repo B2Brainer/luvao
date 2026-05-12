@@ -77,6 +77,22 @@ export class OrchestratorController {
     });
   }
 
+  @Get('stats/price-series')
+  @ApiOperation({ summary: 'Obtener serie temporal diaria de precios' })
+  async getPriceSeries(
+    @Query('query') query?: string,
+    @Query('storeName') storeName?: string,
+    @Query('days') days?: string,
+  ) {
+    const parsedDays = days ? Number(days) : undefined;
+
+    return this.dashboardService.getPriceSeries({
+      query,
+      storeName,
+      days: parsedDays !== undefined && Number.isFinite(parsedDays) ? parsedDays : undefined,
+    });
+  }
+
   @Get('products')
   @ApiOperation({ summary: 'Obtener lista de nombres de productos' })
   async getProducts() {

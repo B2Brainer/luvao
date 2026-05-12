@@ -79,4 +79,12 @@ export class ScrapedClient {
     );
     return response.data;
   }
+
+  async getPriceSeries(filters: PriceStatsFilters = {}) {
+    const response = await this.http.axiosRef.get(
+      `${SERVICES.SCRAPED}/searched-products/stats/price-series`,
+      { params: filters }
+    );
+    return response.data;
+  }
 }

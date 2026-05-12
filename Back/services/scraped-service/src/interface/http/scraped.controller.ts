@@ -13,6 +13,7 @@ import { SearchScrapedProductsByNameUseCase } from '../../application/use-cases/
 import { SearchScrapedProductsByAvailabilityUseCase } from '../../application/use-cases/search-scraped-products-by-availability.usecase';
 import { SearchScrapedProductsByFiltersUseCase } from '../../application/use-cases/search-scraped-products-by-filters.usecase';
 import { GetScrapedPriceStatsUseCase } from '../../application/use-cases/get-scraped-price-stats.usecase';
+import { GetScrapedPriceSeriesUseCase } from '../../application/use-cases/get-scraped-price-series.usecase';
 import { toScrapedProductResponseDto } from '../../application/mappers/scraped-product.mapper';
 import { CreateScrapedProductDto } from '../../application/dto/create-scraped-product.dto';
 import { UpdateScrapedProductDto } from '../../application/dto/update-scraped-product.dto';
@@ -86,6 +87,7 @@ export class SearchedController {
     private readonly searchScrapedProductsByAvailability: SearchScrapedProductsByAvailabilityUseCase,
     private readonly searchScrapedProductsByFilters: SearchScrapedProductsByFiltersUseCase,
     private readonly getScrapedPriceStats: GetScrapedPriceStatsUseCase,
+    private readonly getScrapedPriceSeries: GetScrapedPriceSeriesUseCase,
   ) {}
 
   @Post('bulk-replace')
@@ -126,6 +128,21 @@ export class SearchedController {
     const parsedDays = days ? Number(days) : undefined;
 
     return this.getScrapedPriceStats.execute({
+      query,
+      storeName,
+      days: parsedDays !== undefined && Number.isFinite(parsedDays) ? parsedDays : undefined,
+    });
+  }
+
+  @Get('stats/price-series')
+  async getPriceSeries(
+    @Query('query') query?: string,
+    @Query('storeName') storeName?: string,
+    @Query('days') days?: string,
+  ) {
+    const parsedDays = days ? Number(days) : undefined;
+
+    return this.getScrapedPriceSeries.execute({
       query,
       storeName,
       days: parsedDays !== undefined && Number.isFinite(parsedDays) ? parsedDays : undefined,
