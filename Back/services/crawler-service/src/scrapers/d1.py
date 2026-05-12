@@ -1,5 +1,6 @@
 import asyncio
 import re
+import time
 from typing import Optional
 
 from selenium import webdriver
@@ -13,6 +14,8 @@ BASE_URL = "https://domicilios.tiendasd1.com/search?name="
 MAX_RETRIES = 3
 RETRY_BACKOFF_SECONDS = 1
 RATE_LIMIT_SECONDS = 1.2
+SCROLL_PAUSE_SECONDS = 1.0
+MAX_SCROLL_ITERATIONS = 8
 
 
 def _extract_price(text: str) -> Optional[float]:
@@ -45,6 +48,7 @@ def _build_driver() -> webdriver.Chrome:
 
 def _scrape_query_sync(query: str) -> list[dict]:
     results = []
+    seen_hrefs: set[str] = set()
     driver = _build_driver()
     try:
         driver.get(f"{BASE_URL}{query}")
@@ -54,23 +58,40 @@ def _scrape_query_sync(query: str) -> list[dict]:
             EC.presence_of_all_elements_located((By.CSS_SELECTOR, 'a[href^="/p/"]'))
         )
 
-        links = driver.find_elements(By.CSS_SELECTOR, 'a[href^="/p/"]')
-        for link in links:
-            text = " ".join(link.text.split())
-            href = link.get_attribute("href")
-            if not text or not href:
-                continue
+        stagnant_scrolls = 0
+        for _ in range(MAX_SCROLL_ITERATIONS):
+            added_this_round = 0
+            links = driver.find_elements(By.CSS_SELECTOR, 'a[href^="/p/"]')
 
-            price = _extract_price(text)
-            cleaned_name = re.sub(r"^\W+", "", text).strip()
-            if cleaned_name:
-                results.append(
-                    {
-                        "name": cleaned_name,
-                        "price": price,
-                        "url": href,
-                    }
-                )
+            for link in links:
+                text = " ".join(link.text.split())
+                href = link.get_attribute("href")
+                if not text or not href or href in seen_hrefs:
+                    continue
+
+                price = _extract_price(text)
+                cleaned_name = re.sub(r"^\W+", "", text).strip()
+                if cleaned_name:
+                    seen_hrefs.add(href)
+                    results.append(
+                        {
+                            "name": cleaned_name,
+                            "price": price,
+                            "url": href,
+                        }
+                    )
+                    added_this_round += 1
+
+            if added_this_round == 0:
+                stagnant_scrolls += 1
+            else:
+                stagnant_scrolls = 0
+
+            if stagnant_scrolls >= 2:
+                break
+
+            driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+            time.sleep(SCROLL_PAUSE_SECONDS)
     finally:
         driver.quit()
 
