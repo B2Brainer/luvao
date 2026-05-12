@@ -61,6 +61,22 @@ export class OrchestratorController {
     return this.dashboardService.getByStore(storeName);
   }
 
+  @Get('stats/price')
+  @ApiOperation({ summary: 'Obtener estadisticas descriptivas de precios' })
+  async getPriceStats(
+    @Query('query') query?: string,
+    @Query('storeName') storeName?: string,
+    @Query('days') days?: string,
+  ) {
+    const parsedDays = days ? Number(days) : undefined;
+
+    return this.dashboardService.getPriceStats({
+      query,
+      storeName,
+      days: parsedDays !== undefined && Number.isFinite(parsedDays) ? parsedDays : undefined,
+    });
+  }
+
   @Get('products')
   @ApiOperation({ summary: 'Obtener lista de nombres de productos' })
   async getProducts() {

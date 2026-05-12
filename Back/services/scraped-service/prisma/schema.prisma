@@ -26,4 +26,21 @@ model ScrapedProduct {
   @@map("scraped_products")
 }
 
+model ScrapedProductHistory {
+  id           String   @id @default(uuid())
+  storeName    String
+  query        String
+  name         String
+  price        Float?
+  url          String?
+  availability Boolean?
+  scrapedAt    DateTime @default(now())
 
+  @@index([storeName])
+  @@index([query])
+  @@index([name])
+  @@index([scrapedAt])
+  @@index([storeName, query])
+  @@index([query, scrapedAt])
+  @@map("scraped_products_history")
+}

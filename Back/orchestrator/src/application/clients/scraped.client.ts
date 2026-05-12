@@ -10,6 +10,12 @@ type ScrapedFilters = {
   availability?: boolean;
 };
 
+type PriceStatsFilters = {
+  query?: string;
+  storeName?: string;
+  days?: number;
+};
+
 @Injectable()
 export class ScrapedClient {
   constructor(private http: HttpService) {}
@@ -61,6 +67,14 @@ export class ScrapedClient {
   async searchByFilters(filters: ScrapedFilters) {
     const response = await this.http.axiosRef.get(
       `${SERVICES.SCRAPED}/searched-products/search/filters`,
+      { params: filters }
+    );
+    return response.data;
+  }
+
+  async getPriceStats(filters: PriceStatsFilters = {}) {
+    const response = await this.http.axiosRef.get(
+      `${SERVICES.SCRAPED}/searched-products/stats/price`,
       { params: filters }
     );
     return response.data;
