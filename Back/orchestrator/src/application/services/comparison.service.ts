@@ -37,6 +37,13 @@ type ShoppingItem = {
   quantity?: number;
 };
 
+type ResearchBasketItem = {
+  product: string;
+  quantity: number;
+  category?: string;
+  unit?: string | null;
+};
+
 const STOPWORDS = new Set([
   'de',
   'del',
@@ -221,10 +228,7 @@ export class ComparisonService {
   async optimizeShoppingList(items?: ShoppingItem[]) {
     const requestedItems = items && items.length > 0
       ? items
-      : (await this.productClient.getProductNames()).map((name: string) => ({
-          product: name,
-          quantity: 1,
-        }));
+      : await this.getDefaultResearchBasket();
 
     const allRaw: RawScraped[] = await this.scrapedClient.searchByFilters({ availability: true });
     const canonicalAll = allRaw.map((p) => this.toCanonicalProduct(p));
@@ -284,6 +288,10 @@ export class ComparisonService {
       estimatedByStore: byStore,
       lines,
     };
+  }
+
+  async getResearchBasket() {
+    return await this.getDefaultResearchBasket();
   }
 
   private toCanonicalProduct(raw: RawScraped): CanonicalProduct {
@@ -444,6 +452,25 @@ export class ComparisonService {
     }
 
     return NON_GROCERY_STEMS.some((stem) => token.includes(stem));
+  }
+
+  private async getDefaultResearchBasket(): Promise<ShoppingItem[]> {
+    try {
+      const basket = await this.productClient.getDaneFamilyBasket();
+      if (Array.isArray(basket) && basket.length > 0) {
+        return basket.map((item: ResearchBasketItem) => ({
+          product: item.product,
+          quantity: item.quantity > 0 ? item.quantity : 1,
+        }));
+      }
+    } catch {
+      // Fallback al catálogo simple si la canasta investigativa no está disponible.
+    }
+
+    return (await this.productClient.getProductNames()).map((name: string) => ({
+      product: name,
+      quantity: 1,
+    }));
   }
 
   private pickBestByStore<T extends { storeName: string; price: number | null; matchScore: number }>(items: T[]): T[] {

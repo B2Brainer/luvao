@@ -93,6 +93,12 @@ export class OrchestratorController {
     });
   }
 
+  @Get('research/dane-basket')
+  @ApiOperation({ summary: 'Obtener canasta familiar de referencia basada en DANE' })
+  async getResearchBasket() {
+    return this.comparisonService.getResearchBasket();
+  }
+
   @Get('products')
   @ApiOperation({ summary: 'Obtener lista de nombres de productos' })
   async getProducts() {

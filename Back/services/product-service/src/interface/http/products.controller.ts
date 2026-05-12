@@ -8,6 +8,7 @@ import { GetAllProductsUseCase } from '../../application/use-cases/get-all-produ
 import { UpdateProductUseCase } from '../../application/use-cases/update-product.usecase';
 import { DeleteProductUseCase } from '../../application/use-cases/delete-product.usecase';
 import { GetProductNamesUseCase } from '../../application/use-cases/get-product-names.usecase';
+import { GetDaneFamilyBasketUseCase } from '../../application/use-cases/get-dane-family-basket.usecase';
 import { SearchProductsByNameUseCase } from '../../application/use-cases/search-products-by-name.usecase';
 import { toProductResponseDto } from '../../application/mappers/product.mapper';
 import { CreateProductDto } from '../../application/dto/create-product.dto';
@@ -36,6 +37,7 @@ export class ProductsController {
     private readonly updateProduct: UpdateProductUseCase,
     private readonly deleteProduct: DeleteProductUseCase,
     private readonly getProductNames: GetProductNamesUseCase,
+    private readonly getDaneFamilyBasket: GetDaneFamilyBasketUseCase,
     private readonly searchProductsByName: SearchProductsByNameUseCase,
   ) {}
 
@@ -49,6 +51,11 @@ export class ProductsController {
   @Get('names')
   async getNames() {
     return this.getProductNames.execute();
+  }
+
+  @Get('research/dane-basket')
+  async getDaneBasket() {
+    return this.getDaneFamilyBasket.execute();
   }
 
   @Get('search')
