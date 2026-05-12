@@ -1,8 +1,10 @@
 import asyncio
 import re
 import time
+from urllib.parse import quote
 from typing import Optional
 
+import httpx
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
@@ -16,8 +18,61 @@ BASE_URL = "https://domicilios.tiendasd1.com/search?name="
 MAX_RETRIES = 3
 RETRY_BACKOFF_SECONDS = 1
 RATE_LIMIT_SECONDS = 1.2
-SCROLL_PAUSE_SECONDS = 1.0
-MAX_SCROLL_ITERATIONS = 8
+SEARCH_TIMEOUT_SECONDS = 20.0
+
+
+def _fetch_query_html(query: str) -> str:
+    headers = {
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/124.0.0.0 Safari/537.36"
+        ),
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    }
+
+    with httpx.Client(timeout=SEARCH_TIMEOUT_SECONDS, follow_redirects=True, headers=headers) as client:
+        response = client.get(f"{BASE_URL}{quote(query)}")
+        response.raise_for_status()
+        return response.text
+
+
+def _extract_products_from_html(html_text: str) -> list[dict]:
+    products: list[dict] = []
+    pattern = re.compile(
+        r'([a-z0-9]+):T[0-9a-z]+,\\u003cbody\\u003e(.*?)\\"__typename\\":\\"CatalogProductModel\\"',
+        re.S,
+    )
+
+    for _, raw_block in pattern.findall(html_text):
+        block = (
+            raw_block.replace("\\u003c", "<")
+            .replace("\\u003e", ">")
+            .replace("\\u0026", "&")
+            .replace("\\/", "/")
+            .replace("\\\"", '"')
+            .replace("\\n", "\n")
+        )
+        name_match = re.search(r"Nombre del producto:\s*(.*?)</h2>", block, re.S)
+        price_match = re.search(r'"priceBeforeTaxes":([0-9]+)', block)
+        sku_match = re.search(r'"sku":"([^"]+)"', block)
+
+        if not name_match:
+            continue
+
+        product = build_product_record(
+            name_match.group(1),
+            float(price_match.group(1)) if price_match else None,
+            None,
+        )
+        if product is None:
+            continue
+
+        if sku_match:
+            product["id"] = sku_match.group(1)
+        products.append(product)
+
+    return dedupe_products(products)
 
 
 def _extract_price(text: str) -> Optional[float]:
@@ -49,8 +104,16 @@ def _build_driver() -> webdriver.Chrome:
 
 
 def _scrape_query_sync(query: str) -> list[dict]:
+    try:
+        html_text = _fetch_query_html(query)
+        products = _extract_products_from_html(html_text)
+        if products:
+            return products
+    except Exception:
+        pass
+
     results = []
-    seen_hrefs: set[str] = set()
+    seen_ids: set[str] = set()
     driver = _build_driver()
     try:
         driver.get(f"{BASE_URL}{query}")
@@ -60,42 +123,25 @@ def _scrape_query_sync(query: str) -> list[dict]:
             EC.presence_of_all_elements_located((By.CSS_SELECTOR, 'a[href^="/p/"]'))
         )
 
-        stagnant_scrolls = 0
-        for _ in range(MAX_SCROLL_ITERATIONS):
-            added_this_round = 0
-            links = driver.find_elements(By.CSS_SELECTOR, 'a[href^="/p/"]')
+        for link in driver.find_elements(By.CSS_SELECTOR, 'a[href^="/p/"]'):
+            text = " ".join(link.text.split())
+            href = link.get_attribute("href")
+            if not text:
+                continue
 
-            for link in links:
-                text = " ".join(link.text.split())
-                href = link.get_attribute("href")
-                if not text or not href or href in seen_hrefs:
+            price = _extract_price(text)
+            cleaned_name = re.sub(r"^\W+", "", text).strip()
+            if cleaned_name:
+                product = build_product_record(cleaned_name, price, href)
+                if product is None:
                     continue
 
-                price = _extract_price(text)
-                cleaned_name = re.sub(r"^\W+", "", text).strip()
-                if cleaned_name:
-                    product = build_product_record(cleaned_name, price, href)
-                    if product is None:
-                        continue
+                product_id = product_identity(product)
+                if product_id in seen_ids:
+                    continue
 
-                    product_id = product_identity(product)
-                    if product_id in seen_hrefs:
-                        continue
-
-                    seen_hrefs.add(product_id)
-                    results.append(product)
-                    added_this_round += 1
-
-            if added_this_round == 0:
-                stagnant_scrolls += 1
-            else:
-                stagnant_scrolls = 0
-
-            if stagnant_scrolls >= 2:
-                break
-
-            driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-            time.sleep(SCROLL_PAUSE_SECONDS)
+                seen_ids.add(product_id)
+                results.append(product)
     finally:
         driver.quit()
 
