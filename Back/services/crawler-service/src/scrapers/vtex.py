@@ -3,6 +3,8 @@ from urllib.parse import quote
 
 import httpx
 
+from src.scrapers.common import build_product_record, dedupe_products, product_identity
+
 DEFAULT_PAGE_SIZE = 10
 DEFAULT_MAX_PAGES = 25
 DEFAULT_TIMEOUT = 20.0
@@ -42,11 +44,7 @@ def _extract_product(item: dict) -> dict | None:
         return None
 
     url = (item.get("link") or "").strip() or None
-    return {
-        "name": name,
-        "price": _extract_price(item),
-        "url": url,
-    }
+    return build_product_record(name, _extract_price(item), url)
 
 
 async def scrape_vtex_queries(
@@ -97,7 +95,7 @@ async def scrape_vtex_queries(
                     if product is None:
                         continue
 
-                    product_id = str(item.get("productId") or product["url"] or product["name"]).strip().lower()
+                    product_id = str(item.get("productId") or product_identity(product)).strip().lower()
                     if product_id in seen_ids:
                         continue
 
@@ -110,4 +108,4 @@ async def scrape_vtex_queries(
 
                 offset += page_size
 
-    return products
+    return dedupe_products(products)

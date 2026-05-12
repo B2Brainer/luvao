@@ -10,6 +10,8 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
+from src.scrapers.common import build_product_record, dedupe_products, product_identity
+
 BASE_URL = "https://domicilios.tiendasd1.com/search?name="
 MAX_RETRIES = 3
 RETRY_BACKOFF_SECONDS = 1
@@ -72,14 +74,16 @@ def _scrape_query_sync(query: str) -> list[dict]:
                 price = _extract_price(text)
                 cleaned_name = re.sub(r"^\W+", "", text).strip()
                 if cleaned_name:
-                    seen_hrefs.add(href)
-                    results.append(
-                        {
-                            "name": cleaned_name,
-                            "price": price,
-                            "url": href,
-                        }
-                    )
+                    product = build_product_record(cleaned_name, price, href)
+                    if product is None:
+                        continue
+
+                    product_id = product_identity(product)
+                    if product_id in seen_hrefs:
+                        continue
+
+                    seen_hrefs.add(product_id)
+                    results.append(product)
                     added_this_round += 1
 
             if added_this_round == 0:
@@ -95,7 +99,7 @@ def _scrape_query_sync(query: str) -> list[dict]:
     finally:
         driver.quit()
 
-    return results
+    return dedupe_products(results)
 
 
 async def scrape_d1(queries: list[str]) -> list[dict]:
