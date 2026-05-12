@@ -82,14 +82,100 @@ const TOKEN_SYNONYMS: Record<string, string> = {
 const NON_GROCERY_TOKENS = new Set([
   'bioaqua',
   'bloqueador',
+  'batidora',
+  'bandeja',
+  'corporal',
   'jabon',
   'gel',
   'cuchara',
   'dispensador',
+  'espumadora',
+  'extractor',
+  'freidora',
+  'hervidor',
+  'mango',
+  'maleta',
+  'maquina',
   'solar',
   'minichefs',
+  'morral',
+  'organizador',
+  'recargable',
   'serun',
+  'spray',
+  'usb',
+  'vaporera',
 ]);
+
+const NON_GROCERY_STEMS = [
+  'organizador',
+  'batidor',
+  'rejilla',
+  'hervidor',
+  'hervidora',
+  'cocedor',
+  'cocedora',
+  'cortador',
+  'cortadora',
+  'pinata',
+  'dinosaur',
+  'decorativ',
+  'casa',
+  'vaporera',
+  'bandeja',
+  'freidora',
+  'dispensador',
+];
+
+const FOOD_ANCHOR_TOKENS = new Set([
+  'arroz',
+  'aceite',
+  'leche',
+  'huevo',
+  'huevos',
+  'azucar',
+  'cafe',
+  'atun',
+]);
+
+const EGG_QUERY_TOKENS = new Set(['huevo', 'huevos']);
+
+const EGG_FOOD_SIGNALS = new Set([
+  'und',
+  'unidad',
+  'unidades',
+  'docena',
+  'rojo',
+  'blanco',
+  'codorniz',
+  'organico',
+  'avinal',
+  'santa',
+  'napoles',
+  'reyes',
+]);
+
+const EGG_NON_FOOD_STEMS = [
+  'sarten',
+  'molde',
+  'soporte',
+  'canasta',
+  'coccion',
+  'cocinar',
+  'accesorio',
+  'didactic',
+  'shaker',
+  'hatchimal',
+  'kinder',
+  'chocolate',
+  'rejipla',
+  'silicona',
+  'cacerola',
+  'antiadherente',
+  'pancake',
+  'gallina',
+  'juguete',
+];
 
 @Injectable()
 export class ComparisonService {
@@ -328,11 +414,36 @@ export class ComparisonService {
 
     const coverage = intersection / targetSet.size;
     const jaccard = intersection / (targetSet.size + candidateSet.size - intersection);
-    const hasNonGrocerySignal = candidateTokens.some((token) => NON_GROCERY_TOKENS.has(token));
+    const hasNonGrocerySignal = candidateTokens.some((token) => this.isNonGroceryToken(token));
+    const hasFoodAnchor = targetTokens.some((token) => FOOD_ANCHOR_TOKENS.has(token));
+    const isEggQuery = targetTokens.some((token) => EGG_QUERY_TOKENS.has(token));
 
-    const penalty = hasNonGrocerySignal ? 0.5 : 1;
+    if (isEggQuery) {
+      const hasEggFoodSignal = candidateTokens.some((token) => EGG_FOOD_SIGNALS.has(token));
+      const hasEggNonFoodSignal = candidateTokens.some((token) =>
+        EGG_NON_FOOD_STEMS.some((stem) => token.includes(stem)),
+      );
+
+      if (!hasEggFoodSignal || hasEggNonFoodSignal) {
+        return 0;
+      }
+    }
+
+    if (hasFoodAnchor && hasNonGrocerySignal) {
+      return 0;
+    }
+
+    const penalty = hasNonGrocerySignal ? 0.1 : 1;
 
     return Number(((coverage * 0.7 + jaccard * 0.3) * penalty).toFixed(4));
+  }
+
+  private isNonGroceryToken(token: string): boolean {
+    if (NON_GROCERY_TOKENS.has(token)) {
+      return true;
+    }
+
+    return NON_GROCERY_STEMS.some((stem) => token.includes(stem));
   }
 
   private pickBestByStore<T extends { storeName: string; price: number | null; matchScore: number }>(items: T[]): T[] {

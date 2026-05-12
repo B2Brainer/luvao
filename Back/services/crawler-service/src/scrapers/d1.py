@@ -53,15 +53,15 @@ def _extract_products_from_html(html_text: str) -> list[dict]:
             .replace("\\\"", '"')
             .replace("\\n", "\n")
         )
-        name_match = re.search(r"Nombre del producto:\s*(.*?)</h2>", block, re.S)
+        product_name = _extract_product_name(block)
         price_match = re.search(r'"priceBeforeTaxes":([0-9]+)', block)
         sku_match = re.search(r'"sku":"([^"]+)"', block)
 
-        if not name_match:
+        if not product_name:
             continue
 
         product = build_product_record(
-            name_match.group(1),
+            product_name,
             float(price_match.group(1)) if price_match else None,
             None,
         )
@@ -73,6 +73,25 @@ def _extract_products_from_html(html_text: str) -> list[dict]:
         products.append(product)
 
     return dedupe_products(products)
+
+
+def _extract_product_name(block: str) -> str | None:
+    named_heading = re.search(r"Nombre del producto:\s*(.*?)</h2>", block, re.S)
+    if named_heading:
+        return _sanitize_product_name(named_heading.group(1))
+
+    generic_heading = re.search(r"<h2>(.*?)</h2>", block, re.S)
+    if generic_heading:
+        return _sanitize_product_name(generic_heading.group(1))
+
+    return None
+
+
+def _sanitize_product_name(name: str) -> str:
+    cleaned = re.sub(r'\"]\)\s*<\/script>.*$', '', name, flags=re.S)
+    cleaned = re.sub(r'^Nombre del Producto:\s*', '', cleaned, flags=re.I)
+    cleaned = re.sub(r'^Nombre del producto:\s*', '', cleaned, flags=re.I)
+    return " ".join(cleaned.split()).strip()
 
 
 def _extract_price(text: str) -> Optional[float]:
