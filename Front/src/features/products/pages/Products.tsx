@@ -143,7 +143,6 @@ function progressForStatus(status?: ScrapingJob['status']) {
 function Products() {
   const [productQuery, setProductQuery] = useState('arroz')
   const latestProductQuery = useRef(productQuery)
-  const [catalogProducts, setCatalogProducts] = useState<string[]>([])
   const [researchBasket, setResearchBasket] = useState<BasketItem[]>([])
   const [priceStats, setPriceStats] = useState<PriceStatsResponse | null>(null)
 
@@ -168,23 +167,15 @@ function Products() {
   useEffect(() => {
     const loadResearchData = async () => {
       try {
-        const [catalogRes, basketRes, statsRes] = await Promise.all([
-          orchestratorService.getProductList(),
+        const [basketRes, statsRes] = await Promise.all([
           orchestratorService.getResearchBasket(),
           orchestratorService.getPriceStats({ days: 7 }),
         ])
 
-        setCatalogProducts(
-          Array.isArray(catalogRes.data)
-            ? catalogRes.data
-            : Array.isArray(catalogRes.data?.products)
-              ? catalogRes.data.products
-              : [],
-        )
         setResearchBasket(Array.isArray(basketRes.data) ? basketRes.data : [])
         setPriceStats(statsRes.data)
       } catch {
-        setCatalogProducts([])
+        setResearchBasket([])
       }
     }
 
@@ -434,38 +425,27 @@ function Products() {
 
   return (
     <div className="market-shell">
-      <section className="research-hero" id="stats">
-        <div className="hero-brand-row">
-          <img src="/brand/logo-solo.png" alt="Luvao" className="hero-logo" />
-          <span className="hero-tag">Panel investigativo · Canasta DANE</span>
-        </div>
-
+      <section className="research-hero" id="home">
         <h1>
-          Compara precios de mercado con una estructura clara, profesional y orientada a investigación.
+          Encuentra en segundos dónde conviene comprar cada producto.
         </h1>
 
         <p>
-          Base estadística en tiempo real, comparación por tienda y optimización de canasta familiar sin perder la trazabilidad.
+          Busca lo que necesitas, compara opciones por tienda, revisa precios por presentación y arma una lista que se ajuste mejor a tu presupuesto.
         </p>
 
         <form className="hero-search" onSubmit={handleCompare}>
           <input
-            list="catalog-products"
             value={productQuery}
             onChange={(event) => setProductQuery(event.target.value)}
             placeholder="Buscar producto para comparar: arroz, leche, aceite..."
           />
-          <datalist id="catalog-products">
-            {catalogProducts.map((product) => (
-              <option value={product} key={product} />
-            ))}
-          </datalist>
           <button type="submit" disabled={compareLoading}>
             {compareLoading ? 'Comparando...' : 'Comparar'}
           </button>
         </form>
 
-        <div className="kpi-strip">
+        <div className="kpi-strip" id="stats">
           <article>
             <span>Registros analizados</span>
             <strong>{priceStats?.totalRecords ?? 0}</strong>
@@ -720,7 +700,6 @@ function Products() {
               }}
             >
               <input
-                list="catalog-products"
                 value={itemsInput}
                 onChange={(event) => setItemsInput(event.target.value)}
                 placeholder="Agregar producto"

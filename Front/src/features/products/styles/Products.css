@@ -13,27 +13,8 @@
   box-shadow: 0 18px 40px -30px rgba(16, 28, 48, 0.45);
 }
 
-.hero-brand-row {
-  display: flex;
-  align-items: center;
-  gap: 0.8rem;
-}
-
-.hero-logo {
-  width: 120px;
-  height: auto;
-}
-
-.hero-tag {
-  font-size: 0.74rem;
-  text-transform: uppercase;
-  letter-spacing: 0.14em;
-  font-weight: 800;
-  color: var(--green-500);
-}
-
 .research-hero h1 {
-  margin-top: 0.7rem;
+  margin-top: 0;
   font-family: 'Space Grotesk', sans-serif;
   font-size: clamp(1.9rem, 3vw, 2.75rem);
   line-height: 1.05;

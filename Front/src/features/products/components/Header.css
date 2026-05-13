@@ -24,19 +24,6 @@
   object-fit: contain;
 }
 
-.brand-badge {
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--navy-900);
-}
-
-.brand-wrap span {
-  color: var(--text-soft);
-  font-size: 0.76rem;
-}
-
 .header-nav {
   display: flex;
   gap: 0.2rem;
