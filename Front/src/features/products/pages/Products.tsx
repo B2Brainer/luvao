@@ -26,7 +26,6 @@ type CompareRow = {
 type CompareResponse = {
   product: string
   comparedCount: number
-  missingStores?: string[]
   bestOverall: CompareRow | null
   bestByStore: CompareRow[]
   ranking: CompareRow[]
@@ -573,11 +572,8 @@ function Products() {
               <>
                 {comparisonRows.length === 0 ? (
                   <div className="empty-panel">
-                    <h3>Producto omitido</h3>
-                    <p>
-                      Solo se muestran productos encontrados en D1, Éxito y Olímpica.
-                      {compareData.missingStores?.length ? ` Faltan: ${compareData.missingStores.join(', ')}.` : ''}
-                    </p>
+                    <h3>Sin productos disponibles</h3>
+                    <p>No se encontraron productos relevantes para esta búsqueda.</p>
                   </div>
                 ) : (
                   <>

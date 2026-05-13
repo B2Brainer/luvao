@@ -129,8 +129,6 @@ const TOKEN_SYNONYMS: Record<string, string> = {
   libras: 'lb',
 };
 
-const REQUIRED_STORE_KEYS = ['d1', 'exito', 'olimpica'];
-
 const NON_GROCERY_TOKENS = new Set([
   'bioaqua',
   'bloqueador',
@@ -299,8 +297,7 @@ export class ComparisonService {
       }))
       .filter((p) => p.price !== null && p.relevanceScore > 0.2 && this.isRelevantForTarget(product, p));
 
-    const completeRelevant: Array<CanonicalProduct & { relevanceScore: number }> = this.keepOnlyCompleteStoreSet(relevant);
-    const mapped = this.withValueScores(completeRelevant)
+    const mapped = this.withValueScores(relevant)
       .sort((a, b) => {
         const byScore = b.matchScore - a.matchScore;
         if (byScore !== 0) {
@@ -310,13 +307,11 @@ export class ComparisonService {
       });
 
     const bestByStore = this.pickBestByStore(mapped);
-    const missingStores = this.getMissingRequiredStores(relevant);
 
     return {
       product,
       canonicalProduct: canonicalTarget,
       comparedCount: mapped.length,
-      missingStores,
       bestByStore,
       ranking: mapped,
       bestOverall: mapped[0] ?? null,
@@ -342,8 +337,7 @@ export class ComparisonService {
         }))
         .filter((p) => p.relevanceScore > 0.2 && p.price !== null && this.isRelevantForTarget(item.product, p));
 
-      const completeRelevant: Array<CanonicalProduct & { relevanceScore: number }> = this.keepOnlyCompleteStoreSet(relevant);
-      const candidates = this.withValueScores(completeRelevant)
+      const candidates = this.withValueScores(relevant)
         .sort((a, b) => {
           const byScore = b.matchScore - a.matchScore;
           if (byScore !== 0) {
@@ -360,7 +354,6 @@ export class ComparisonService {
         quantity,
         targetTokens,
         optionsByStore: bestByStore,
-        missingStores: this.getMissingRequiredStores(relevant),
         selected: bestValue,
         subtotal: bestValue?.price ? bestValue.price * quantity : null,
       };
@@ -704,16 +697,6 @@ export class ComparisonService {
       product: name,
       quantity: 1,
     }));
-  }
-
-  private keepOnlyCompleteStoreSet<T extends { storeName: string }>(items: T[]): T[] {
-    const missingStores = this.getMissingRequiredStores(items);
-    return missingStores.length === 0 ? items : [];
-  }
-
-  private getMissingRequiredStores<T extends { storeName: string }>(items: T[]): string[] {
-    const present = new Set(items.map((item) => this.storeKey(item.storeName)));
-    return REQUIRED_STORE_KEYS.filter((store) => !present.has(store));
   }
 
   private storeKey(storeName: string): string {
