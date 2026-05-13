@@ -38,6 +38,9 @@ def test_basket_queries_exclude_common_search_noise():
     assert is_relevant_for_query("leche", "Pan Olimpica Tajado Leche 550 G") is False
     assert is_relevant_for_query("leche", "Avena Alpina con Leche Deslactosada 250 G") is False
     assert is_relevant_for_query("cafe", "Galleta Café Quindío Cafecitas con Café 280 G") is False
+    assert is_relevant_for_query("cafe", "Café con leche instantáneo 20 sobres") is False
+    assert is_relevant_for_query("cafe", "Café Frío Botella 250ML 1UN") is False
+    assert is_relevant_for_query("cafe", "Crema Café Viejo Molino Doypack 175 g") is False
 
 
 def test_arroz_keeps_basic_rice_and_rejects_snacks_or_desserts():
@@ -47,12 +50,14 @@ def test_arroz_keeps_basic_rice_and_rejects_snacks_or_desserts():
     assert is_relevant_for_query("pan", "Harina de Maíz Blanca Pan 800 G") is False
     assert is_relevant_for_query("pan", "Pastas PAN spaghetti 500 gr") is False
     assert is_relevant_for_query("pan", "Mezcla de maíz dulce PAN arepa de choclo") is False
+    assert is_relevant_for_query("pan", "Miga de Pan Backerei 250 g") is False
 
 
 def test_new_basic_basket_queries_keep_expected_products():
     assert is_relevant_for_query("harina de trigo", "Harina de Trigo Haz de Oros 1000 g") is True
     assert is_relevant_for_query("harina de maiz", "Harina de Maíz Doñarepa 1000 g") is True
     assert is_relevant_for_query("galletas de sal", "Galletas Saltin Noel Tradicional 300 g") is True
+    assert is_relevant_for_query("galletas de sal", "Galletas Saltin Noel mix queso mantequilla 510 gr") is False
     assert is_relevant_for_query("cebolla larga", "Cebolla Larga x 500 g") is True
     assert is_relevant_for_query("tomate de arbol", "Tomate de Árbol x kg") is True
     assert is_relevant_for_query("queso campesino", "Queso Campesino 500 g") is True
@@ -63,7 +68,26 @@ def test_new_basic_basket_queries_reject_common_noise():
     assert is_relevant_for_query("tomate", "Tomate de Árbol x kg") is False
     assert is_relevant_for_query("pasta", "Pasta Dental Colgate 75 ml") is False
     assert is_relevant_for_query("mantequilla", "Mantequilla de Maní 500 g") is False
+    assert is_relevant_for_query("mantequilla", "Tostadas con mantequilla 160 g") is False
+    assert is_relevant_for_query("mantequilla", "Galleta Saltín Queso Mantequilla Taco X4 Unds") is False
+    assert is_relevant_for_query("mantequilla", "Tostada Clásica Mantequilla 150g") is False
+    assert is_relevant_for_query("mantequilla", "Crispetas Mantequilla X 12 Unidades Delipop") is False
+    assert is_relevant_for_query("mantequilla", "Palomitas de Maíz Popetas Caramelo Mantequilla 132 G") is False
+    assert is_relevant_for_query("mantequilla", "Lechuga Mantequilla Organica 200 gr") is False
+    assert is_relevant_for_query("mantequilla", "Arepa Gransoli Mantequilla 450 G") is False
+    assert is_relevant_for_query("mantequilla", "Tortillas Mantequilla 1p 240g BOLSA BIM") is False
+    assert is_relevant_for_query("mantequilla", "Panecillo Olimpica Mantequilla 600 G X35 Unds") is False
+    assert is_relevant_for_query("mantequilla", "Caladitos Santa Clara Mantequilla 300 G") is False
+    assert is_relevant_for_query("mantequilla", "Recipiente Plastico para Mantequilla Classic 460ml locknlock") is False
     assert is_relevant_for_query("pollo", "Caldo de Gallina Sabor Pollo") is False
+    assert is_relevant_for_query("pollo", "Patas de pollo x kg") is False
+    assert is_relevant_for_query("pollo", "Pastelito de pollo 48 und") is False
+    assert is_relevant_for_query("pollo", "Salchichon De Pollo Brakelviande 500 G") is False
+    assert is_relevant_for_query("pollo", "Surtida De Pollo Marinada 500G") is False
+    assert is_relevant_for_query("pescado", "Cabeza de pescado x kg") is False
+    assert is_relevant_for_query("pescado", "Pescado Peskar Salsa de Tomate 425 G") is False
+    assert is_relevant_for_query("pescado", "Alimento para Gato Purina Gatsy Pescado y Salmón 500 G") is False
+    assert is_relevant_for_query("pescado", "Gatsy PURINA GATSY PESCADO Y SALMON 500 gr") is False
     assert is_relevant_for_query("mora", "Té sabor mora 20 sobres") is False
     assert is_relevant_for_query("mora", "TÉ SUNTEA MORA 2L 12G") is False
     assert is_relevant_for_query("mora", "Avena Hojuelas Arándanos Fresas Mora 250 gr") is False
@@ -74,3 +98,29 @@ def test_new_basic_basket_queries_reject_common_noise():
     assert is_relevant_for_query("mora", "Juego De Platos Mora Cerámica 6 Unidades") is False
     assert is_relevant_for_query("mora", "JAB LIQ SUPPRA CARE MORA GARDE D/PACK 1L") is False
     assert is_relevant_for_query("mora", "Mora fresca x kg") is True
+    assert is_relevant_for_query("limon", "Panela Pulverizada Limón 500 g") is False
+    assert is_relevant_for_query("limon", "REFRESCO BOKA LIMA LIMON 2L 10G") is False
+    assert is_relevant_for_query("limon", "DITOPAX LIMON/NARANJA BLISTER X 10 TABLETAS") is False
+    assert is_relevant_for_query("limon", "Agua OMI Limón 1700 ML") is False
+    assert is_relevant_for_query("limon", "Blanqueador Ultralimp Limón 4 Lt") is False
+    assert is_relevant_for_query("limon", "Platanitos Limon Kythos 135 G") is False
+    assert is_relevant_for_query("limon", "Sal De Frutas Lua Limón Rápido Alivio X26 Sobres") is False
+    assert is_relevant_for_query("limon", "Choclitos Limon 170 G") is False
+    assert is_relevant_for_query("limon", "Gaseosa Sprite Lima Limón Zero 1.5L") is False
+    assert is_relevant_for_query("limon", "Sexta Papas Limón Kythos 25g") is False
+    assert is_relevant_for_query("guayaba", "Pan con guayaba y queso 300 g") is False
+    assert is_relevant_for_query("guayaba", "Pastel De Guayaba Horneaditos 20 Und 190 G") is False
+    assert is_relevant_for_query("guayaba", "Bolsa Protector Guayaba Manzana X 100 Unidades") is False
+    assert is_relevant_for_query("zanahoria", "Arveja con zanahoria 300 g") is False
+    assert is_relevant_for_query("sal", "Mantequilla con sal 250 g") is False
+    assert is_relevant_for_query("sal", "Arepa Don Maíz Antioqueña con Sal X8 Unds") is False
+    assert is_relevant_for_query("sal", "Sal De Frutas Lua Limón Rápido Alivio X26 Sobres") is False
+    assert is_relevant_for_query("cebolla larga", "Pasta de cebolla larga 200 g") is False
+    assert is_relevant_for_query("maracuya", "Panela Granulada Maracuyá 500 g") is False
+    assert is_relevant_for_query("maracuya", "Agua con Gas Maracuyá OMI 1700 ML") is False
+    assert is_relevant_for_query("maracuya", "O1NE Nigth Maracuya Yerbabuena Caja X 25 Sobres") is False
+    assert is_relevant_for_query("maracuya", "BEB HIDRAT HIDRALYTE MARACUYA 640ML") is False
+    assert is_relevant_for_query("queso campesino", "Arepa con queso campesino 500 g") is False
+    assert is_relevant_for_query("azucar", "Brownie con azúcar 80 g") is False
+    assert is_relevant_for_query("azucar", "Refresco Tampico Cero Azúcar 2 Lt") is False
+    assert is_relevant_for_query("mantequilla", "Block Icopel Papel Mantequilla 1/8 X35 Hojas") is False

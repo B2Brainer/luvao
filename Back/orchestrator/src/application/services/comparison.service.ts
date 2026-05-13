@@ -261,13 +261,26 @@ type ProductRule = {
   excludeTokens?: string[];
 };
 
+const BASE_PRODUCT_DERIVATIVE_STEMS = [
+  'sabor',
+  'mezcla',
+  'relleno',
+  'rellena',
+  'con queso',
+  'con mantequilla',
+  'brownie',
+  'snack',
+  'bebida',
+  'refresc',
+];
+
 const PRODUCT_RULES: Record<string, ProductRule> = {
   arroz: { all: ['arroz'], excludeStems: ['galleta', 'achocolat', 'arroz con leche', 'bebida', 'sabor'] },
   pasta: { any: ['pasta'], excludeStems: ['pasta dental', 'pasta de tomate', 'salsa', 'crema'] },
   'harina de trigo': { all: ['harina', 'trigo'] },
   'harina de maiz': { all: ['harina', 'maiz'] },
-  pan: { all: ['pan'], excludeStems: ['panela', 'apanado', 'harina', 'pasta', 'spaghetti', 'espagueti', 'macarron', 'mezcla', 'arepa'] },
-  'galletas de sal': { any: ['galleta'], excludeStems: ['dulce', 'chocolate', 'wafer', 'rellena', 'crema'] },
+  pan: { all: ['pan'], excludeStems: ['panela', 'apanado', 'harina', 'pasta', 'spaghetti', 'espagueti', 'macarron', 'mezcla', 'arepa', 'miga de pan'] },
+  'galletas de sal': { any: ['galleta'], excludeStems: ['dulce', 'chocolate', 'wafer', 'rellena', 'relleno', 'crema', 'mix', 'queso', 'mantequilla'] },
   avena: { all: ['avena'], excludeStems: ['bebida', 'galleta', 'barra'] },
   papa: { all: ['papa'], excludeStems: ['frita', 'chips', 'fosforo', 'margarita'] },
   yuca: { all: ['yuca'], excludeStems: ['frita', 'chips'] },
@@ -277,30 +290,30 @@ const PRODUCT_RULES: Record<string, ProductRule> = {
   'arveja seca': { all: ['arveja'], excludeStems: ['congelada', 'enlatada', 'sopa'] },
   tomate: { all: ['tomate'], excludeStems: ['tomate de arbol', 'salsa', 'pasta', 'pure', 'ketchup', 'jugo'] },
   'cebolla cabezona': { all: ['cebolla'], excludeStems: ['cebolla larga'] },
-  'cebolla larga': { all: ['cebolla', 'larga'] },
-  zanahoria: { all: ['zanahoria'], excludeStems: ['bebida', 'jugo', 'galleta', 'dulce', 'sabor'] },
+  'cebolla larga': { all: ['cebolla', 'larga'], excludeStems: ['pasta', 'salsa', 'polvo', 'sazonador'] },
+  zanahoria: { all: ['zanahoria'], excludeStems: ['arveja', 'bebida', 'jugo', 'galleta', 'dulce', 'sabor'] },
   habichuela: { all: ['habichuela'], excludeStems: ['enlat'] },
   banano: { all: ['banano'], excludeTokens: ['te'], excludeStems: ['bebida', 'jugo', 'galleta', 'dulce', 'sabor', 'tea', 'infusion', 'aromatica', 'avena', 'cereal', 'granola', 'yogur', 'helado'] },
   naranja: { all: ['naranja'], excludeTokens: ['te'], excludeStems: ['bebida', 'jugo', 'galleta', 'dulce', 'sabor', 'tea', 'infusion', 'aromatica', 'avena', 'cereal', 'granola', 'yogur', 'helado'] },
-  limon: { all: ['limon'], excludeTokens: ['te'], excludeStems: ['bebida', 'jugo', 'galleta', 'limonada', 'sabor', 'tea', 'infusion', 'aromatica', 'avena', 'cereal', 'granola', 'yogur', 'helado'] },
-  guayaba: { all: ['guayaba'], excludeTokens: ['te'], excludeStems: ['bebida', 'jugo', 'galleta', 'dulce', 'sabor', 'tea', 'infusion', 'aromatica', 'avena', 'cereal', 'granola', 'yogur', 'helado'] },
+  limon: { all: ['limon'], excludeTokens: ['te'], excludeStems: ['panela', 'boka', 'refresc', 'bebida', 'jugo', 'galleta', 'limonada', 'agua', 'omi', 'ditopax', 'tableta', 'tablet', 'pastilla', 'blister', 'sal de frutas', 'fruta', 'alivio', 'lua', 'sobre', 'sobres', 'blanqueador', 'ultralimp', 'limpiador', 'platanito', 'platanitos', 'choclito', 'choclitos', 'papas', 'sexta', 'gaseosa', 'sprite', 'lima limon', 'zero', 'chip', 'chips', 'snack', 'sabor', 'tea', 'infusion', 'aromatica', 'avena', 'cereal', 'granola', 'yogur', 'helado'] },
+  guayaba: { all: ['guayaba'], excludeTokens: ['te'], excludeStems: ['protector', 'bolsa protector', 'manzana', 'queso', 'pastel', 'pastelito', 'pan ', 'bebida', 'jugo', 'galleta', 'dulce', 'sabor', 'tea', 'infusion', 'aromatica', 'avena', 'cereal', 'granola', 'yogur', 'helado'] },
   mora: { all: ['mora'], excludeTokens: ['te'], excludeStems: ['bebida', 'jugo', 'refresc', 'fresky', 'hit', 'galleta', 'mermelada', 'caramelo', 'sabor', 'tea', 'infusion', 'aromatica', 'avena', 'cereal', 'granola', 'yogur', 'yogurt', 'yoghurt', 'yagur', 'yogo', 'helado', 'activox', 'jengibre', 'sobre', 'uva', 'fresa', 'arandano', 'plato', 'ceramica', 'microondas', 'lavavajillas', 'juego', 'jab ', 'jabon', 'suppra', 'care'] },
-  maracuya: { all: ['maracuya'], excludeTokens: ['te'], excludeStems: ['bebida', 'jugo', 'galleta', 'dulce', 'sabor', 'tea', 'infusion', 'aromatica', 'avena', 'cereal', 'granola', 'yogur', 'helado'] },
+  maracuya: { all: ['maracuya'], excludeTokens: ['te'], excludeStems: ['agua', 'agua con gas', 'gas', 'omi', 'panela', 'refresc', 'bebida', 'beb hidrat', 'hidrat', 'hidralyte', 'suero', 'electrolit', 'jugo', 'galleta', 'dulce', 'sabor', 'tea', 'infusion', 'aromatica', 'yerbabuena', 'sobre', 'sobres', 'o1ne', 'night', 'nigth', 'caja', 'avena', 'cereal', 'granola', 'yogur', 'helado'] },
   'tomate de arbol': { all: ['tomate', 'arbol'], excludeTokens: ['te'], excludeStems: ['bebida', 'jugo', 'sabor', 'tea', 'infusion', 'aromatica'] },
   'carne de res': { all: ['carne', 'res'], excludeStems: ['perro', 'gato', 'sabor'] },
   'carne de cerdo': { all: ['carne', 'cerdo'], excludeStems: ['perro', 'gato', 'sabor'] },
-  pollo: { all: ['pollo'], excludeStems: ['caldo', 'consome', 'sabor', 'sazonador', 'croqueta'] },
-  pescado: { any: ['pescado', 'tilapia', 'trucha', 'mojarra', 'filete'], excludeStems: ['atun', 'sardina', 'caldo', 'sabor'] },
+  pollo: { all: ['pollo'], excludeStems: ['pastel', 'pastelito', 'caldo', 'consome', 'sabor', 'sazonador', 'croqueta', 'pata de pollo', 'patas de pollo', 'salchichon', 'salchicha', 'embutido', 'jamon', 'mortadela', 'nugget', 'apanado', 'hamburguesa', 'marinad'] },
+  pescado: { any: ['pescado', 'tilapia', 'trucha', 'mojarra', 'filete'], excludeStems: ['salsa', 'tomate', 'gatsy', 'purina', 'alimento para gato', 'gato', 'perro', 'cabeza', 'atun', 'sardina', 'caldo', 'sabor'] },
   leche: { all: ['leche'], excludeStems: ['crema de leche', 'dulce de leche', 'leche condensada', 'leche de coco', 'chocolate', 'galleta', 'caramelo', 'flan', 'postre', 'avena', 'pan ', 'cereal', 'yogur', 'yogurt', 'yogo'] },
-  'queso campesino': { all: ['queso', 'campesino'], excludeStems: ['sabor', 'snack'] },
+  'queso campesino': { all: ['queso', 'campesino'], excludeStems: ['arepa', 'sabor', 'snack'] },
   'aceite vegetal': { all: ['aceite'], excludeStems: ['atun', 'motor', 'motocicleta', 'automotr', 'lubric', 'masaje', 'esencial'] },
   aceite: { all: ['aceite'], excludeStems: ['atun', 'motor', 'motocicleta', 'automotr', 'lubric', 'masaje', 'esencial'] },
   margarina: { all: ['margarina'] },
-  mantequilla: { all: ['mantequilla'], excludeStems: ['mani', 'cacahuate', 'cacao'] },
-  azucar: { all: ['azucar'], excludeStems: ['sin azucar', '0 azucar', 'mango', 'bebida', 'galleta', 'caramelo', 'endulzado'] },
+  mantequilla: { all: ['mantequilla'], excludeStems: ['caladito', 'caladitos', 'panecillo', 'pancito', 'pancitos', 'comapan', 'arepa', 'tortilla', 'tortillas', 'lechuga', 'organica', 'palomitas', 'crispetas', 'popetas', 'popflix', 'caramelo', 'maiz', 'tostada', 'tostadas', 'delipop', 'galleta', 'saltin', 'queso', 'papel mantequilla', 'papel', 'block', 'icopel', 'recipiente', 'plastico', 'plastic', 'contenedor', 'envase', 'locknlock', 'mani', 'cacahuate', 'cacao'] },
+  azucar: { all: ['azucar'], excludeStems: ['sin azucar', '0 azucar', 'cero azucar', 'mango', 'brownie', 'torta', 'refresc', 'bebida', 'galleta', 'caramelo', 'endulzado'] },
   panela: { all: ['panela'], excludeStems: ['bebida', 'galleta', 'dulce'] },
-  sal: { all: ['sal'], excludeStems: ['salsa', 'salchicha'] },
-  cafe: { all: ['cafe'], excludeStems: ['galleta', 'cafecitas', 'dulce', 'chocolate', 'sabor cafe', 'licor'] },
+  sal: { all: ['sal'], excludeStems: ['sal de frutas', 'fruta', 'alivio', 'lua', 'limon', 'arepa', 'maiz', 'antioquena', 'con sal', 'mantequilla', 'salsa', 'salchicha'] },
+  cafe: { all: ['cafe'], excludeStems: ['crema cafe', 'crema', 'cafe frio', 'frio', 'botella', 'cafe con leche', 'con leche', 'latte', 'capuccino', 'cappuccino', 'bebida', 'galleta', 'cafecitas', 'dulce', 'chocolate', 'sabor cafe', 'licor'] },
 };
 
 const DEFAULT_PERIOD_DAYS = 30;
@@ -321,18 +334,18 @@ const CATEGORY_CALORIE_SHARE: Record<string, number> = {
 
 const CALORIE_REFERENCES: Record<string, CalorieReference> = {
   arroz: { caloriesPerKg: 3600 },
-  pasta: { caloriesPerKg: 3710 },
+  pasta: { caloriesPerKg: 3500 },
   'harina de trigo': { caloriesPerKg: 3640 },
   'harina de maiz': { caloriesPerKg: 3650 },
-  pan: { caloriesPerKg: 2650 },
-  'galletas de sal': { caloriesPerKg: 4300 },
+  pan: { caloriesPerKg: 2670 },
+  'galletas de sal': { caloriesPerKg: 4500 },
   avena: { caloriesPerKg: 3890 },
   papa: { caloriesPerKg: 770 },
   yuca: { caloriesPerKg: 1600 },
   'platano verde': { caloriesPerKg: 1220, caloriesPerUnit: 218 },
   frijol: { caloriesPerKg: 3370 },
   lentejas: { caloriesPerKg: 3530 },
-  'arveja seca': { caloriesPerKg: 3410 },
+  'arveja seca': { caloriesPerKg: 3400 },
   tomate: { caloriesPerKg: 180 },
   'cebolla cabezona': { caloriesPerKg: 400 },
   'cebolla larga': { caloriesPerKg: 320 },
@@ -344,23 +357,23 @@ const CALORIE_REFERENCES: Record<string, CalorieReference> = {
   guayaba: { caloriesPerKg: 680, caloriesPerUnit: 68 },
   mora: { caloriesPerKg: 430 },
   maracuya: { caloriesPerKg: 970, caloriesPerUnit: 17 },
-  'tomate de arbol': { caloriesPerKg: 300, caloriesPerUnit: 40 },
+  'tomate de arbol': { caloriesPerKg: 480, caloriesPerUnit: 40 },
   'carne de res': { caloriesPerKg: 2500 },
   'carne de cerdo': { caloriesPerKg: 2420 },
   pollo: { caloriesPerKg: 2390 },
-  pescado: { caloriesPerKg: 1200 },
+  pescado: { caloriesPerKg: 2000 },
   huevos: { caloriesPerKg: 1550, caloriesPerUnit: 70 },
   huevo: { caloriesPerKg: 1550, caloriesPerUnit: 70 },
   leche: { caloriesPerKg: 4960, caloriesPerL: 610 },
   'queso campesino': { caloriesPerKg: 2800 },
-  'aceite vegetal': { caloriesPerL: 8100 },
-  aceite: { caloriesPerL: 8100 },
+  'aceite vegetal': { caloriesPerKg: 8840, caloriesPerL: 8133 },
+  aceite: { caloriesPerKg: 8840, caloriesPerL: 8133 },
   margarina: { caloriesPerKg: 7200 },
   mantequilla: { caloriesPerKg: 7170 },
   azucar: { caloriesPerKg: 3870 },
   panela: { caloriesPerKg: 3500 },
   sal: { caloriesPerKg: 0 },
-  cafe: { caloriesPerKg: 20 },
+  cafe: { caloriesPerKg: 0 },
 };
 
 @Injectable()
@@ -508,7 +521,11 @@ export class ComparisonService {
         const caloriePlan = targetPerProduct !== null
           ? this.pickCaloriePlanForTarget(line.candidates, targetPerProduct)
           : null;
-        const selected = caloriePlan?.selected ?? this.pickBestCalorieValue(line.candidates) ?? line.optionsByStore[0] ?? null;
+        const selected = caloriePlan?.selected ??
+          this.pickBestCalorieValue(line.candidates) ??
+          this.pickLowestPriceCandidate(line.candidates) ??
+          line.optionsByStore[0] ??
+          null;
         line.selected = selected;
 
         if (!line.selected) {
@@ -577,10 +594,14 @@ export class ComparisonService {
   private getCandidateRanking(product: string, canonicalAll: CanonicalProduct[]): RankedProduct[] {
     const targetTokens = this.toCanonicalTokens(product);
     const relevant: Array<CanonicalProduct & { relevanceScore: number }> = canonicalAll
-      .map((p) => ({
-        ...p,
-        relevanceScore: this.computeTextMatchScore(targetTokens, p.canonicalTokens),
-      }))
+      .map((p) => {
+        const targetedProduct = this.withNutritionTarget(p, product);
+
+        return {
+          ...targetedProduct,
+          relevanceScore: this.computeTextMatchScore(targetTokens, targetedProduct.canonicalTokens),
+        };
+      })
       .filter((p) => p.price !== null && p.relevanceScore > 0.2 && this.isRelevantForTarget(product, p));
 
     return this.withValueScores(relevant)
@@ -618,6 +639,52 @@ export class ComparisonService {
 
       return (a.price ?? Number.MAX_SAFE_INTEGER) - (b.price ?? Number.MAX_SAFE_INTEGER);
     })[0] ?? null;
+  }
+
+  private pickLowestPriceCandidate(candidates: RankedProduct[]): RankedProduct | null {
+    const pricedCandidates = candidates.filter((candidate) => candidate.price !== null && candidate.price > 0);
+    if (pricedCandidates.length === 0) {
+      return null;
+    }
+
+    const comparableByPresentation = pricedCandidates.filter((candidate) =>
+      candidate.pricePerUnit !== null &&
+      candidate.pricePerUnit > 0 &&
+      candidate.presentation.baseUnit !== 'und'
+    );
+    const candidatesToSort = comparableByPresentation.length > 0 ? comparableByPresentation : pricedCandidates;
+
+    return [...candidatesToSort].sort((a, b) => {
+      if (comparableByPresentation.length > 0) {
+        const byUnitPrice = (a.pricePerUnit as number) - (b.pricePerUnit as number);
+        if (byUnitPrice !== 0) {
+          return byUnitPrice;
+        }
+      }
+
+      const byRawPrice = (a.price as number) - (b.price as number);
+      if (byRawPrice !== 0) {
+        return byRawPrice;
+      }
+
+      return b.matchScore - a.matchScore;
+    })[0] ?? null;
+  }
+
+  private withNutritionTarget(product: CanonicalProduct, nutritionTarget: string): CanonicalProduct {
+    const nutrition = this.estimateNutrition(nutritionTarget, product.presentation, product.normalizedName);
+    const pricePerCalorie = product.price !== null &&
+      product.price > 0 &&
+      nutrition.calories !== null &&
+      nutrition.calories > 0
+        ? this.roundNumber(product.price / nutrition.calories, 4)
+        : null;
+
+    return {
+      ...product,
+      nutrition,
+      pricePerCalorie,
+    };
   }
 
   private pickCaloriePlanForTarget(
@@ -686,7 +753,7 @@ export class ComparisonService {
     const presentation = this.extractPresentation(raw.name);
     const availability = raw.availability ?? raw.price !== null;
     const price = raw.price ?? null;
-    const nutrition = this.estimateNutrition(nutritionTarget, presentation);
+    const nutrition = this.estimateNutrition(nutritionTarget, presentation, normalizedName);
 
     let pricePerUnit: number | null = null;
     if (price !== null && presentation.baseAmount && presentation.baseAmount > 0) {
@@ -851,6 +918,7 @@ export class ComparisonService {
   private estimateNutrition(
     productQuery: string,
     presentation: CanonicalProduct['presentation'],
+    normalizedName: string,
   ): CanonicalProduct['nutrition'] {
     const productKey = this.resolveCalorieReferenceKey(productQuery);
     const empty = {
@@ -867,7 +935,9 @@ export class ComparisonService {
 
     const reference = CALORIE_REFERENCES[productKey];
     const baseUnit = presentation.baseUnit as BaseUnit | null;
-    const caloriesPerBaseUnit = baseUnit ? this.caloriesPerBaseUnit(reference, baseUnit) : null;
+    const caloriesPerBaseUnit = baseUnit
+      ? this.caloriesPerBaseUnit(reference, baseUnit, productKey, normalizedName)
+      : null;
 
     if (caloriesPerBaseUnit === null) {
       return {
@@ -921,7 +991,16 @@ export class ComparisonService {
     return null;
   }
 
-  private caloriesPerBaseUnit(reference: CalorieReference, baseUnit: BaseUnit): number | null {
+  private caloriesPerBaseUnit(
+    reference: CalorieReference,
+    baseUnit: BaseUnit,
+    productKey: string,
+    normalizedName: string,
+  ): number | null {
+    if ((productKey === 'huevos' || productKey === 'huevo') && baseUnit === 'und') {
+      return normalizedName.includes('codorniz') ? 14 : reference.caloriesPerUnit ?? null;
+    }
+
     if (baseUnit === 'kg') {
       return reference.caloriesPerKg ?? null;
     }
@@ -1059,6 +1138,10 @@ export class ComparisonService {
       return false;
     }
 
+    if (this.hasBaseDerivativeNoise(targetNorm, tokens, name)) {
+      return false;
+    }
+
     if (rule.excludeStems?.some((stem) => name.includes(stem))) {
       return false;
     }
@@ -1090,6 +1173,18 @@ export class ComparisonService {
     }
 
     return true;
+  }
+
+  private hasBaseDerivativeNoise(targetNorm: string, tokens: Set<string>, normalizedName: string): boolean {
+    if (BASE_PRODUCT_DERIVATIVE_STEMS.some((stem) => normalizedName.includes(stem))) {
+      return true;
+    }
+
+    if (targetNorm !== 'pan' && tokens.has('pan')) {
+      return true;
+    }
+
+    return false;
   }
 
   private async getDefaultResearchBasket(): Promise<ResearchBasketItem[]> {

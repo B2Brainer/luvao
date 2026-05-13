@@ -214,8 +214,12 @@ _MILK_EXCLUDE_STEMS = [
 _SUGAR_EXCLUDE_STEMS = [
     "sin azucar",
     "0 azucar",
+    "cero azucar",
     "mango",
     "aguardiente",
+    "brownie",
+    "torta",
+    "refresc",
     "bebida",
     "galleta",
     "caramelo",
@@ -225,6 +229,17 @@ _SUGAR_EXCLUDE_STEMS = [
 ]
 
 _COFFEE_EXCLUDE_STEMS = [
+    "crema cafe",
+    "crema",
+    "cafe frio",
+    "frio",
+    "botella",
+    "cafe con leche",
+    "con leche",
+    "latte",
+    "capuccino",
+    "cappuccino",
+    "bebida",
     "galleta",
     "cafecitas",
     "dulce",
@@ -254,6 +269,19 @@ _EGG_EXCLUDE_TOKENS = {
     "shaker",
 }
 
+_BASE_PRODUCT_DERIVATIVE_STEMS = [
+    "sabor",
+    "mezcla",
+    "relleno",
+    "rellena",
+    "con queso",
+    "con mantequilla",
+    "brownie",
+    "snack",
+    "bebida",
+    "refresc",
+]
+
 
 def _has_non_food_signal(normalized_name: str) -> bool:
     return any(stem in normalized_name for stem in _GENERIC_NON_FOOD_STEMS)
@@ -277,6 +305,14 @@ def _is_simple_token_query(query_norm: str, name_tokens: set[str], excluded_stem
     return not _has_stem(" ".join(name_tokens), excluded_stems or [])
 
 
+def _has_base_derivative_noise(query_norm: str, name_tokens: set[str], normalized_name: str) -> bool:
+    if _has_stem(normalized_name, _BASE_PRODUCT_DERIVATIVE_STEMS):
+        return True
+    if query_norm != "pan" and "pan" in name_tokens:
+        return True
+    return False
+
+
 def is_relevant_for_query(query: str, product_name: str) -> bool:
     query_norm = normalize_text(query)
     normalized_name = normalize_text(product_name)
@@ -290,6 +326,9 @@ def is_relevant_for_query(query: str, product_name: str) -> bool:
         return bool(query_tokens & name_tokens)
 
     if not normalized_name:
+        return False
+
+    if _has_base_derivative_noise(query_norm, name_tokens, normalized_name):
         return False
 
     if query_norm == "arroz":
@@ -313,7 +352,7 @@ def is_relevant_for_query(query: str, product_name: str) -> bool:
     if query_norm == "pan":
         return "pan" in name_tokens and not _has_stem(
             normalized_name,
-            ["panela", "apanado", "molde", "harina", "pasta", "spaghetti", "espagueti", "macarron", "mezcla", "arepa"],
+            ["panela", "apanado", "molde", "harina", "pasta", "spaghetti", "espagueti", "macarron", "mezcla", "arepa", "miga de pan"],
         )
 
     if query_norm == "galletas de sal":
@@ -322,7 +361,10 @@ def is_relevant_for_query(query: str, product_name: str) -> bool:
                 _has_any(name_tokens, {"galleta", "galletas", "saltin", "saltinas", "cracker", "crackers"})
                 or _has_stem(normalized_name, ["salada", "saltin"])
             )
-            and not _has_stem(normalized_name, ["dulce", "chocolate", "wafer", "rellena", "crema"])
+            and not _has_stem(
+                normalized_name,
+                ["dulce", "chocolate", "wafer", "rellena", "relleno", "crema", "mix", "queso", "mantequilla"],
+            )
         )
 
     if query_norm == "avena":
@@ -368,18 +410,57 @@ def is_relevant_for_query(query: str, product_name: str) -> bool:
         )
 
     if query_norm == "cebolla larga":
-        return "cebolla" in name_tokens and "larga" in name_tokens
+        return "cebolla" in name_tokens and "larga" in name_tokens and not _has_stem(
+            normalized_name,
+            ["pasta", "salsa", "polvo", "sazonador"],
+        )
 
     if query_norm in {"zanahoria", "habichuela", "banano", "naranja", "guayaba", "maracuya", "panela", "sal"}:
+        extra_noise = []
+        if query_norm == "zanahoria":
+            extra_noise = ["arveja"]
+        if query_norm == "guayaba":
+            extra_noise = ["protector", "bolsa protector", "manzana", "queso", "pastel", "pastelito", "pan "]
+        if query_norm == "maracuya":
+            extra_noise = ["agua", "agua con gas", "gas", "omi", "panela", "refresc", "beb hidrat", "hidrat", "hidralyte", "suero", "electrolit", "yerbabuena", "sobre", "sobres", "o1ne", "night", "nigth", "caja"]
+        if query_norm == "sal":
+            extra_noise = [
+                "sal de frutas",
+                "fruta",
+                "alivio",
+                "lua",
+                "limon",
+                "arepa",
+                "maiz",
+                "antioquena",
+                "con sal",
+                "mantequilla",
+            ]
+
         return query_norm in name_tokens and "te" not in name_tokens and not _has_stem(
             normalized_name,
-            ["bebida", "jugo", "galleta", "dulce", "sabor", "tea", "infusion", "aromatica", "avena", "cereal", "granola", "yogur", "helado"],
+            [
+                "bebida",
+                "jugo",
+                "galleta",
+                "dulce",
+                "sabor",
+                "tea",
+                "infusion",
+                "aromatica",
+                "avena",
+                "cereal",
+                "granola",
+                "yogur",
+                "helado",
+                *extra_noise,
+            ],
         )
 
     if query_norm == "limon":
         return "limon" in name_tokens and "te" not in name_tokens and not _has_stem(
             normalized_name,
-            ["bebida", "jugo", "galleta", "limonada", "sabor", "tea", "infusion", "aromatica", "avena", "cereal", "granola", "yogur", "helado"],
+            ["panela", "boka", "refresc", "bebida", "jugo", "galleta", "limonada", "agua", "omi", "ditopax", "tableta", "tablet", "pastilla", "blister", "sal de frutas", "fruta", "alivio", "lua", "sobre", "sobres", "blanqueador", "ultralimp", "limpiador", "platanito", "platanitos", "choclito", "choclitos", "papas", "sexta", "gaseosa", "sprite", "lima limon", "zero", "chip", "chips", "snack", "sabor", "tea", "infusion", "aromatica", "avena", "cereal", "granola", "yogur", "helado"],
         )
 
     if query_norm == "mora":
@@ -438,12 +519,15 @@ def is_relevant_for_query(query: str, product_name: str) -> bool:
         return _has_all(name_tokens, {"carne", "cerdo"}) and not _has_stem(normalized_name, ["perro", "gato", "sabor"])
 
     if query_norm == "pollo":
-        return "pollo" in name_tokens and not _has_stem(normalized_name, ["caldo", "consome", "sabor", "sazonador", "croqueta"])
+        return "pollo" in name_tokens and not _has_stem(
+            normalized_name,
+            ["pastel", "pastelito", "caldo", "consome", "sabor", "sazonador", "croqueta", "pata de pollo", "patas de pollo", "salchichon", "salchicha", "embutido", "jamon", "mortadela", "nugget", "apanado", "hamburguesa", "marinad"],
+        )
 
     if query_norm == "pescado":
         return (
             _has_any(name_tokens, {"pescado", "tilapia", "trucha", "mojarra", "filete"})
-            and not _has_stem(normalized_name, ["atun", "sardina", "caldo", "sabor"])
+            and not _has_stem(normalized_name, ["salsa", "tomate", "gatsy", "purina", "alimento para gato", "gato", "perro", "cabeza", "atun", "sardina", "caldo", "sabor"])
         )
 
     if query_norm in {"huevo", "huevos"}:
@@ -470,13 +554,53 @@ def is_relevant_for_query(query: str, product_name: str) -> bool:
         return normalized_name.startswith("leche ")
 
     if query_norm == "queso campesino":
-        return _has_all(name_tokens, {"queso", "campesino"}) and not _has_stem(normalized_name, ["sabor", "snack"])
+        return _has_all(name_tokens, {"queso", "campesino"}) and not _has_stem(normalized_name, ["arepa", "sabor", "snack"])
 
     if query_norm == "margarina":
         return "margarina" in name_tokens
 
     if query_norm == "mantequilla":
-        return "mantequilla" in name_tokens and not _has_stem(normalized_name, ["mani", "cacahuate", "cacao"])
+        return "mantequilla" in name_tokens and not _has_stem(
+            normalized_name,
+            [
+                "palomitas",
+                "caladito",
+                "caladitos",
+                "panecillo",
+                "pancito",
+                "pancitos",
+                "comapan",
+                "arepa",
+                "tortilla",
+                "tortillas",
+                "lechuga",
+                "organica",
+                "crispetas",
+                "popetas",
+                "popflix",
+                "caramelo",
+                "maiz",
+                "tostada",
+                "tostadas",
+                "delipop",
+                "galleta",
+                "saltin",
+                "queso",
+                "papel mantequilla",
+                "papel",
+                "block",
+                "icopel",
+                "recipiente",
+                "plastico",
+                "plastic",
+                "contenedor",
+                "envase",
+                "locknlock",
+                "mani",
+                "cacahuate",
+                "cacao",
+            ],
+        )
 
     if query_norm == "azucar":
         if any(stem in normalized_name for stem in _SUGAR_EXCLUDE_STEMS):
