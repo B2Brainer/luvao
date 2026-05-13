@@ -213,7 +213,7 @@ export default function ProductDetail() {
               <span>actualización reciente</span>
             </div>
 
-            {ranking.slice(0, 14).map((p) => {
+            {ranking.map((p) => {
               const safePrice = p.price ?? 0
               const width = bestPrice && safePrice > 0 ? Math.max(18, (bestPrice / safePrice) * 100) : 18
               return (

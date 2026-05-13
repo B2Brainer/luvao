@@ -647,7 +647,7 @@ function Products() {
                         </tr>
                       </thead>
                       <tbody>
-                        {filteredRanking.slice(0, 18).map((row) => (
+                        {filteredRanking.map((row) => (
                           <tr key={row.id}>
                             <td>{row.storeName}</td>
                             <td>{row.sourceName}</td>

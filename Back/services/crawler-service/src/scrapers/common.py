@@ -17,7 +17,7 @@ def build_product_record(name: str, price: float | int | None = None, url: str |
 
 
 def product_identity(product: dict) -> str:
-    return str(product.get("url") or product.get("name") or "").strip().lower()
+    return str(product.get("id") or product.get("url") or product.get("name") or "").strip().lower()
 
 
 def dedupe_products(products: list[dict]) -> list[dict]:
@@ -224,6 +224,9 @@ def is_relevant_for_query(query: str, product_name: str) -> bool:
     if not normalized_name:
         return False
 
+    if query_norm == "arroz":
+        return "arroz" in name_tokens
+
     if _has_non_food_signal(normalized_name):
         return False
 
@@ -242,9 +245,6 @@ def is_relevant_for_query(query: str, product_name: str) -> bool:
         if any(stem in normalized_name for stem in _OIL_NON_FOOD_STEMS):
             return False
         return True
-
-    if query_norm == "arroz":
-        return "arroz" in name_tokens
 
     if query_norm == "leche":
         if any(stem in normalized_name for stem in _MILK_EXCLUDE_STEMS):

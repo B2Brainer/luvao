@@ -222,7 +222,7 @@ export class ComparisonService {
       canonicalProduct: canonicalTarget,
       comparedCount: mapped.length,
       bestByStore,
-      ranking: mapped.slice(0, 30),
+      ranking: mapped,
       bestOverall: mapped[0] ?? null,
     };
   }

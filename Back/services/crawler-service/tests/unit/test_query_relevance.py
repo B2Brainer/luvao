@@ -36,3 +36,8 @@ def test_basket_queries_exclude_common_search_noise():
     assert is_relevant_for_query("leche", "Flan de Leche 200 G") is False
     assert is_relevant_for_query("leche", "Leche Condensada Doypack Latti 300 Grs") is False
     assert is_relevant_for_query("cafe", "Galleta Café Quindío Cafecitas con Café 280 G") is False
+
+
+def test_arroz_keeps_store_results_that_are_not_plain_rice():
+    assert is_relevant_for_query("arroz", "Arroz Achocolatado Fiocco 320g") is True
+    assert is_relevant_for_query("arroz", "Galletas de arroz integral") is True

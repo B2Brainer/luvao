@@ -1,7 +1,8 @@
 import asyncio
 import re
+import time
 from typing import Optional
-from urllib.parse import quote
+from urllib.parse import quote, urlparse
 
 import httpx
 from selenium import webdriver
@@ -113,6 +114,39 @@ def _extract_price(text: str) -> Optional[float]:
         return None
 
 
+def _extract_sku_from_url(url: str | None) -> str | None:
+    if not url:
+        return None
+
+    match = re.search(r"-(\d+)(?:/?$|[?#])", url)
+    return match.group(1) if match else None
+
+
+def _extract_product_name_from_url(url: str | None) -> str | None:
+    if not url:
+        return None
+
+    path = urlparse(url).path
+    slug = path.rstrip("/").split("/")[-1]
+    sku = _extract_sku_from_url(url)
+    if sku and slug.endswith(f"-{sku}"):
+        slug = slug[: -(len(sku) + 1)]
+
+    cleaned = re.sub(r"[-_]+", " ", slug)
+    cleaned = re.sub(r"\s+", " ", cleaned).strip()
+    return cleaned.title() if cleaned else None
+
+
+def _extract_product_name_from_card_text(text: str, href: str | None = None) -> str | None:
+    from_url = _extract_product_name_from_url(href)
+    if from_url:
+        return from_url
+
+    without_price = re.sub(r"^\s*\d{1,3}(?:[.,]\d{3})*\s+", "", text).strip()
+    without_unit_price = re.sub(r"\s*\([^)]*\$\s*[^)]*\)\s*$", "", without_price).strip()
+    return " ".join(without_unit_price.split()) or None
+
+
 def _build_driver() -> webdriver.Chrome:
     options = Options()
     options.add_argument("--headless=new")
@@ -130,17 +164,20 @@ def _build_driver() -> webdriver.Chrome:
 
 
 def _scrape_query_sync(query: str) -> list[dict]:
+    results: list[dict] = []
+
     try:
         html_text = _fetch_query_html(query)
-        products = _extract_products_from_html(html_text, query=query)
-        if products:
-            return products
+        results.extend(_extract_products_from_html(html_text, query=query))
     except Exception:
         pass
 
-    results = []
     seen_ids: set[str] = set()
-    driver = _build_driver()
+    try:
+        driver = _build_driver()
+    except Exception:
+        return dedupe_products(results)
+
     try:
         driver.get(f"{BASE_URL}{query}")
 
@@ -149,13 +186,22 @@ def _scrape_query_sync(query: str) -> list[dict]:
             EC.presence_of_all_elements_located((By.CSS_SELECTOR, 'a[href^="/p/"]'))
         )
 
+        previous_height = 0
+        for _ in range(4):
+            current_height = driver.execute_script("return document.body.scrollHeight")
+            if current_height == previous_height:
+                break
+            previous_height = current_height
+            driver.execute_script("window.scrollTo(0, document.body.scrollHeight)")
+            time.sleep(0.6)
+
         for link in driver.find_elements(By.CSS_SELECTOR, 'a[href^="/p/"]'):
             text = " ".join(link.text.split())
             href = link.get_attribute("href")
             if not text:
                 continue
 
-            cleaned_name = re.sub(r"^\W+", "", text).strip()
+            cleaned_name = _extract_product_name_from_card_text(text, href)
             if cleaned_name and not is_relevant_for_query(query, cleaned_name):
                 continue
 
@@ -164,6 +210,10 @@ def _scrape_query_sync(query: str) -> list[dict]:
                 product = build_product_record(cleaned_name, price, href)
                 if product is None:
                     continue
+
+                sku = _extract_sku_from_url(href)
+                if sku:
+                    product["id"] = sku
 
                 product_id = product_identity(product)
                 if product_id in seen_ids:
