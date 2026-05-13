@@ -267,27 +267,6 @@ button:disabled {
   gap: 1rem;
 }
 
-.panel-head-actions {
-  display: flex;
-  align-items: center;
-  gap: 0.8rem;
-}
-
-.detail-link {
-  text-decoration: none;
-  color: #0f294a;
-  border: 1px solid rgba(20, 32, 51, 0.12);
-  background: #f5f8fc;
-  border-radius: 8px;
-  font-size: 0.8rem;
-  font-weight: 700;
-  padding: 0.45rem 0.7rem;
-}
-
-.detail-link:hover {
-  background: #eaf1f9;
-}
-
 .panel-head p {
   max-width: 44ch;
   text-align: right;
@@ -610,12 +589,13 @@ td a {
     grid-template-columns: 1fr;
   }
 
-  .panel-head,
-  .panel-head p,
-  .panel-head-actions {
-    text-align: left;
+  .panel-head {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .panel-head p {
+    text-align: left;
   }
 
   .hero-search,

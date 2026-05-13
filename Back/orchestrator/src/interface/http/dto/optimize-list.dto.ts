@@ -22,4 +22,18 @@ export class OptimizeListDto {
   @ValidateNested({ each: true })
   @Type(() => ShoppingListItemDto)
   items?: ShoppingListItemDto[];
+
+  @ApiPropertyOptional({ example: 30, default: 30, description: 'Periodo de compra en días para la canasta optimizada por calorías' })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Type(() => Number)
+  periodDays?: number;
+
+  @ApiPropertyOptional({ example: 66000, description: 'Meta calórica total para el periodo. Si se omite se usa 2200 kcal por día.' })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Type(() => Number)
+  targetCalories?: number;
 }

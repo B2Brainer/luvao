@@ -82,11 +82,7 @@ export const orchestratorService = {
 
   optimizeList: (items: Array<{ product: string; quantity?: number }>) =>
     api.post('/orchestrator/optimize-list', { items }),
-
-  optimizeFullCatalog: () =>
-    api.post('/orchestrator/optimize-list', {}),
 }
-
 
 
 

@@ -146,6 +146,9 @@ export class OrchestratorController {
   @ApiOperation({ summary: 'Optimizar lista completa de compras' })
   @ApiResponse({ status: 200, description: 'Selección sugerida y total estimado' })
   async optimizeList(@Body() dto: OptimizeListDto) {
-    return this.comparisonService.optimizeShoppingList(dto.items);
+    return this.comparisonService.optimizeShoppingList(dto.items, {
+      periodDays: dto.periodDays,
+      targetCalories: dto.targetCalories,
+    });
   }
 }

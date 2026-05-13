@@ -35,6 +35,8 @@ def test_basket_queries_exclude_common_search_noise():
     assert is_relevant_for_query("leche", "Chocolate Milka Leche 80 G") is False
     assert is_relevant_for_query("leche", "Flan de Leche 200 G") is False
     assert is_relevant_for_query("leche", "Leche Condensada Doypack Latti 300 Grs") is False
+    assert is_relevant_for_query("leche", "Pan Olimpica Tajado Leche 550 G") is False
+    assert is_relevant_for_query("leche", "Avena Alpina con Leche Deslactosada 250 G") is False
     assert is_relevant_for_query("cafe", "Galleta Café Quindío Cafecitas con Café 280 G") is False
 
 
@@ -42,6 +44,9 @@ def test_arroz_keeps_basic_rice_and_rejects_snacks_or_desserts():
     assert is_relevant_for_query("arroz", "Arroz Premium Albar 1000 Grs") is True
     assert is_relevant_for_query("arroz", "Arroz Achocolatado Fiocco 320g") is False
     assert is_relevant_for_query("arroz", "Galletas de arroz integral") is False
+    assert is_relevant_for_query("pan", "Harina de Maíz Blanca Pan 800 G") is False
+    assert is_relevant_for_query("pan", "Pastas PAN spaghetti 500 gr") is False
+    assert is_relevant_for_query("pan", "Mezcla de maíz dulce PAN arepa de choclo") is False
 
 
 def test_new_basic_basket_queries_keep_expected_products():
@@ -59,3 +64,13 @@ def test_new_basic_basket_queries_reject_common_noise():
     assert is_relevant_for_query("pasta", "Pasta Dental Colgate 75 ml") is False
     assert is_relevant_for_query("mantequilla", "Mantequilla de Maní 500 g") is False
     assert is_relevant_for_query("pollo", "Caldo de Gallina Sabor Pollo") is False
+    assert is_relevant_for_query("mora", "Té sabor mora 20 sobres") is False
+    assert is_relevant_for_query("mora", "TÉ SUNTEA MORA 2L 12G") is False
+    assert is_relevant_for_query("mora", "Avena Hojuelas Arándanos Fresas Mora 250 gr") is False
+    assert is_relevant_for_query("mora", "Yagur Colanta Mora 900 G") is False
+    assert is_relevant_for_query("mora", "Yogo Yogo Alpina Mora 1000 G") is False
+    assert is_relevant_for_query("mora", "Refresco Hit Mora Pet 1500 ml") is False
+    assert is_relevant_for_query("mora", "REFRESC CALIFORNIA FRESKY MORA TB 900ML") is False
+    assert is_relevant_for_query("mora", "Juego De Platos Mora Cerámica 6 Unidades") is False
+    assert is_relevant_for_query("mora", "JAB LIQ SUPPRA CARE MORA GARDE D/PACK 1L") is False
+    assert is_relevant_for_query("mora", "Mora fresca x kg") is True

@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
-import { Link } from 'react-router-dom'
 import { orchestratorService } from '../../../services/api'
 import '../styles/Products.css'
 
@@ -20,6 +19,8 @@ type CompareRow = {
   pricePerUnit: number | null
   matchScore: number
   presentation?: { label?: string | null }
+  nutrition?: { calories?: number | null; label?: string | null }
+  pricePerCalorie?: number | null
   url?: string | null
 }
 
@@ -61,12 +62,20 @@ type ScrapingJob = {
 
 type OptimizeLine = {
   requested: string
+  category?: string
   quantity: number
+  caloriesPerPackage?: number | null
+  targetCalories?: number | null
+  plannedCalories?: number | null
   subtotal: number | null
   selected: CompareRow | null
 }
 
 type OptimizeResponse = {
+  mode?: 'manual' | 'calorie-plan'
+  periodDays?: number
+  targetCalories?: number
+  plannedCalories?: number
   requestedItems: number
   resolvedItems: number
   unresolvedItems: string[]
@@ -93,6 +102,13 @@ function percentLabel(value: number | null | undefined) {
     return 'N/A'
   }
   return `${(value * 100).toFixed(1)}%`
+}
+
+function calorieLabel(value: number | null | undefined) {
+  if (value === null || value === undefined) {
+    return 'N/A'
+  }
+  return `${Math.round(value).toLocaleString('es-CO')} kcal`
 }
 
 function errorMessage(error: unknown, fallback: string) {
@@ -522,13 +538,6 @@ function Products() {
           <section className="panel-block">
             <div className="panel-head">
               <h2>Resultados de comparación</h2>
-              {compareData && (
-                <div className="panel-head-actions">
-                  <Link to={`/products/${encodeURIComponent(compareData.product)}`} className="detail-link">
-                    Ver ficha del producto
-                  </Link>
-                </div>
-              )}
             </div>
 
             {compareError && <p className="error-line">{compareError}</p>}
@@ -735,13 +744,27 @@ function Products() {
                   ))}
                 </article>
 
+                {optimizeData.mode === 'calorie-plan' && (
+                  <article className="summary-card">
+                    <span>Meta calórica</span>
+                    <strong>{calorieLabel(optimizeData.plannedCalories)}</strong>
+                    <small>
+                      Objetivo {calorieLabel(optimizeData.targetCalories)} · {optimizeData.periodDays ?? 30} días
+                    </small>
+                  </article>
+                )}
+
                 <article className="summary-card full">
                   <span>Detalle por ítem</span>
                   {optimizeData.lines.map((line) => (
                     <div className="line item-line" key={line.requested}>
                       <div className="item-detail">
                         <strong>{line.requested}</strong>
-                        <small>{line.selected?.storeName || 'sin coincidencia'} · {line.selected?.sourceName || 'sin opción disponible'}</small>
+                        <small>
+                          {line.quantity > 0 ? `${line.quantity} x ` : ''}
+                          {line.selected?.storeName || 'sin coincidencia'} · {line.selected?.sourceName || 'sin opción disponible'}
+                          {line.plannedCalories ? ` · ${calorieLabel(line.plannedCalories)}` : ''}
+                        </small>
                       </div>
                       <strong>{priceLabel(line.subtotal)}</strong>
                     </div>

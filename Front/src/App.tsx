@@ -2,7 +2,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Auth } from './features/auth/pages/AuthPage'
 import Products from './features/products/pages/Products'
-import ProductDetail from './features/products/pages/ProductDetail'
 import Header from './features/products/components/Header'
 import './App.css'
 
@@ -27,15 +26,6 @@ function App() {
           element={
             <MainLayout>
               <Products />
-            </MainLayout>
-          }
-        />
-
-        <Route
-          path="/products/:id"
-          element={
-            <MainLayout>
-              <ProductDetail />
             </MainLayout>
           }
         />

@@ -125,6 +125,8 @@ _GENERIC_NON_FOOD_STEMS = [
     "caramelo",
     "chocolat",
     "galleta",
+    "jab ",
+    "jabon",
     "mango",
     "aguardiente",
     "bebida",
@@ -201,6 +203,12 @@ _MILK_EXCLUDE_STEMS = [
     "flan",
     "cortadito",
     "postre",
+    "avena",
+    "pan ",
+    "cereal",
+    "yogur",
+    "yogurt",
+    "yogo",
 ]
 
 _SUGAR_EXCLUDE_STEMS = [
@@ -303,7 +311,10 @@ def is_relevant_for_query(query: str, product_name: str) -> bool:
         return _has_all(name_tokens, {"harina", "maiz"})
 
     if query_norm == "pan":
-        return "pan" in name_tokens and not _has_stem(normalized_name, ["panela", "apanado", "molde"])
+        return "pan" in name_tokens and not _has_stem(
+            normalized_name,
+            ["panela", "apanado", "molde", "harina", "pasta", "spaghetti", "espagueti", "macarron", "mezcla", "arepa"],
+        )
 
     if query_norm == "galletas de sal":
         return (
@@ -360,16 +371,65 @@ def is_relevant_for_query(query: str, product_name: str) -> bool:
         return "cebolla" in name_tokens and "larga" in name_tokens
 
     if query_norm in {"zanahoria", "habichuela", "banano", "naranja", "guayaba", "maracuya", "panela", "sal"}:
-        return query_norm in name_tokens and not _has_stem(normalized_name, ["bebida", "jugo", "galleta", "dulce"])
+        return query_norm in name_tokens and "te" not in name_tokens and not _has_stem(
+            normalized_name,
+            ["bebida", "jugo", "galleta", "dulce", "sabor", "tea", "infusion", "aromatica", "avena", "cereal", "granola", "yogur", "helado"],
+        )
 
     if query_norm == "limon":
-        return "limon" in name_tokens and not _has_stem(normalized_name, ["bebida", "jugo", "galleta", "limonada"])
+        return "limon" in name_tokens and "te" not in name_tokens and not _has_stem(
+            normalized_name,
+            ["bebida", "jugo", "galleta", "limonada", "sabor", "tea", "infusion", "aromatica", "avena", "cereal", "granola", "yogur", "helado"],
+        )
 
     if query_norm == "mora":
-        return "mora" in name_tokens and not _has_stem(normalized_name, ["bebida", "jugo", "galleta", "mermelada", "caramelo"])
+        return "mora" in name_tokens and "te" not in name_tokens and not _has_stem(
+            normalized_name,
+            [
+                "bebida",
+                "jugo",
+                "refresc",
+                "fresky",
+                "hit",
+                "galleta",
+                "mermelada",
+                "caramelo",
+                "sabor",
+                "tea",
+                "infusion",
+                "aromatica",
+                "avena",
+                "cereal",
+                "granola",
+                "yogur",
+                "yogurt",
+                "yoghurt",
+                "yagur",
+                "yogo",
+                "helado",
+                "activox",
+                "jengibre",
+                "sobre",
+                "uva",
+                "fresa",
+                "arandano",
+                "plato",
+                "ceramica",
+                "microondas",
+                "lavavajillas",
+                "juego",
+                "jab ",
+                "jabon",
+                "suppra",
+                "care",
+            ],
+        )
 
     if query_norm == "tomate de arbol":
-        return _has_all(name_tokens, {"tomate", "arbol"}) and not _has_stem(normalized_name, ["jugo", "bebida"])
+        return _has_all(name_tokens, {"tomate", "arbol"}) and "te" not in name_tokens and not _has_stem(
+            normalized_name,
+            ["jugo", "bebida", "sabor", "tea", "infusion", "aromatica"],
+        )
 
     if query_norm == "carne de res":
         return _has_all(name_tokens, {"carne", "res"}) and not _has_stem(normalized_name, ["perro", "gato", "sabor"])
@@ -407,7 +467,7 @@ def is_relevant_for_query(query: str, product_name: str) -> bool:
             return False
         if any(stem in normalized_name for stem in _MILK_KEEP_STEMS):
             return True
-        return "leche" in name_tokens
+        return normalized_name.startswith("leche ")
 
     if query_norm == "queso campesino":
         return _has_all(name_tokens, {"queso", "campesino"}) and not _has_stem(normalized_name, ["sabor", "snack"])
