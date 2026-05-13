@@ -11,11 +11,13 @@ from src.scrapers.common import (
     product_identity,
 )
 
-DEFAULT_PAGE_SIZE = 10
-DEFAULT_MAX_PAGES = 25
-DEFAULT_TIMEOUT = 20.0
-MAX_RETRIES = 3
+DEFAULT_PAGE_SIZE = 20
+DEFAULT_MAX_PAGES = 6
+DEFAULT_TIMEOUT = 8.0
+MAX_RETRIES = 2
 RETRY_BACKOFF_SECONDS = 1
+MAX_EMPTY_RELEVANT_PAGES = 2
+MAX_CONCURRENT_QUERIES = 6
 
 
 _FOOD_CATEGORY_HINTS = [
@@ -85,11 +87,32 @@ def _extract_product(item: dict) -> dict | None:
 def _query_terms(query: str) -> list[str]:
     normalized = normalize_text(query)
 
+    if normalized == "pasta":
+        return [query, "fideos", "espagueti"]
+
+    if normalized == "galletas de sal":
+        return [query, "galletas saladas", "saltin"]
+
     if normalized in {"huevos", "huevo"}:
         return [query, "huevo", "huevos"]
 
     if normalized == "cafe":
         return [query, "cafe", "nescafe", "colcafe"]
+
+    if normalized == "aceite vegetal":
+        return [query, "aceite"]
+
+    if normalized == "frijol":
+        return [query, "frijoles"]
+
+    if normalized == "lentejas":
+        return [query, "lenteja"]
+
+    if normalized == "limon":
+        return [query, "limón"]
+
+    if normalized == "platano verde":
+        return [query, "plátano verde", "platano"]
 
     return [query]
 
@@ -124,12 +147,16 @@ async def scrape_vtex_queries(
     products: list[dict] = []
 
     async with client_factory(timeout=DEFAULT_TIMEOUT, follow_redirects=True, headers=headers or {}) as client:
-        for query in queries:
+        semaphore = asyncio.Semaphore(MAX_CONCURRENT_QUERIES)
+
+        async def scrape_query(query: str) -> list[dict]:
+            query_products: list[dict] = []
             seen_ids: set[str] = set()
             seen_catalog_ids: set[str] = set()
 
             for search_term in _query_terms(query):
                 offset = 0
+                empty_relevant_pages = 0
 
                 for _ in range(max_pages):
                     data = None
@@ -182,12 +209,26 @@ async def scrape_vtex_queries(
                             continue
 
                         seen_ids.add(product_id)
-                        products.append(product)
+                        query_products.append(product)
                         page_added += 1
 
-                    if catalog_added == 0 and page_added == 0:
+                    if page_added == 0:
+                        empty_relevant_pages += 1
+                    else:
+                        empty_relevant_pages = 0
+
+                    if catalog_added == 0 or empty_relevant_pages >= MAX_EMPTY_RELEVANT_PAGES:
                         break
 
                     offset += page_size
+
+            return query_products
+
+        async def scrape_query_limited(query: str) -> list[dict]:
+            async with semaphore:
+                return await scrape_query(query)
+
+        for query_products in await asyncio.gather(*(scrape_query_limited(query) for query in queries)):
+            products.extend(query_products)
 
     return dedupe_products(products)

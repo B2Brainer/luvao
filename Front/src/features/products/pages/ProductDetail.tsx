@@ -170,7 +170,7 @@ export default function ProductDetail() {
 
       <section className="detail-container">
         <div className="detail-image">
-          <div className="detail-badge">Canasta DANE</div>
+          <div className="detail-badge">Canasta básica</div>
           <div className="placeholder">
             <div className="placeholder-ring" />
             <span>Ficha comparativa</span>
@@ -180,7 +180,7 @@ export default function ProductDetail() {
         <div className="detail-info">
           <span className="detail-kicker">Resultado investigativo</span>
           <h1>{productName}</h1>
-          <p className="category">Canasta DANE · Comparación multi-tienda</p>
+          <p className="category">Canasta básica · Comparación multi-tienda</p>
           <p className="description">
             Ficha investigativa basada en datos reales del backend para analizar precio, variación y coincidencia semántica por supermercado.
           </p>

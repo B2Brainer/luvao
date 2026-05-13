@@ -26,6 +26,7 @@ type CompareRow = {
 type CompareResponse = {
   product: string
   comparedCount: number
+  missingStores?: string[]
   bestOverall: CompareRow | null
   bestByStore: CompareRow[]
   ranking: CompareRow[]
@@ -399,7 +400,7 @@ function Products() {
       const res = await orchestratorService.optimizeList([])
       setOptimizeData(res.data)
     } catch (err: unknown) {
-      setOptimizeError(errorMessage(err, 'No se pudo optimizar la canasta DANE.'))
+      setOptimizeError(errorMessage(err, 'No se pudo optimizar la canasta básica alimentaria.'))
       setOptimizeData(null)
     } finally {
       setOptimizeLoading(false)
@@ -468,8 +469,8 @@ function Products() {
       <section className="workspace-grid">
         <aside className="left-rail" id="basket">
           <div className="rail-card">
-            <h3>Canasta DANE</h3>
-            <p>Base oficial usada para la comparación investigativa.</p>
+            <h3>Canasta básica alimentaria</h3>
+            <p>Lista de referencia usada para comparar productos esenciales.</p>
 
             <div className="rail-stats">
               <div>
@@ -523,7 +524,7 @@ function Products() {
           <div className="rail-card">
             <h3>Acciones rápidas</h3>
             <button type="button" onClick={optimizeDaneBasket} disabled={optimizeLoading}>
-              {optimizeLoading ? 'Optimizando...' : 'Optimizar canasta DANE'}
+              {optimizeLoading ? 'Optimizando...' : 'Optimizar canasta básica'}
             </button>
             <button type="button" className="ghost" onClick={() => runOptimize(true)} disabled={optimizeLoading}>
               Optimizar catálogo completo
@@ -570,113 +571,121 @@ function Products() {
 
             {compareData ? (
               <>
-                <div className="best-store-grid">
-                  {compareData.bestByStore.map((row) => (
-                    <article className="best-store-card" key={row.id}>
-                      <span>{row.storeName}</span>
-                      <strong>{priceLabel(row.price)}</strong>
-                      <p>{row.sourceName}</p>
-                      <small>{row.presentation?.label || 'Presentación no disponible'}</small>
-                    </article>
-                  ))}
-                </div>
-
-                <div className="filters-row">
-                  <div className="store-filter">
-                    {availableStores.map((store) => (
-                      <label key={store}>
-                        <input
-                          type="checkbox"
-                          checked={selectedStores.includes(store)}
-                          onChange={() => toggleStore(store)}
-                        />
-                        {store}
-                      </label>
-                    ))}
+                {comparisonRows.length === 0 ? (
+                  <div className="empty-panel">
+                    <h3>Producto omitido</h3>
+                    <p>
+                      Solo se muestran productos encontrados en D1, Éxito y Olímpica.
+                      {compareData.missingStores?.length ? ` Faltan: ${compareData.missingStores.join(', ')}.` : ''}
+                    </p>
                   </div>
-
-                  <input
-                    type="number"
-                    min={0}
-                    value={maxPrice ?? ''}
-                    onChange={(event) => {
-                      const raw = event.target.value
-                      setMaxPrice(raw ? Number(raw) : null)
-                    }}
-                    placeholder="Precio máximo"
-                  />
-
-                  <select value={sortBy} onChange={(event) => setSortBy(event.target.value as 'price' | 'score' | 'unit')}>
-                    <option value="price">Ordenar por precio</option>
-                    <option value="score">Ordenar por score</option>
-                    <option value="unit">Ordenar por unidad</option>
-                  </select>
-                </div>
-
-                <div className="compare-layout">
-                  <div className="results-table-wrap">
-                    <table>
-                      <thead>
-                        <tr>
-                          <th>Tienda</th>
-                          <th>Producto encontrado</th>
-                          <th>Precio</th>
-                          <th>Presentación</th>
-                          <th>Score</th>
-                          <th>Enlace</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {filteredRanking.map((row) => (
-                          <tr key={row.id}>
-                            <td>{row.storeName}</td>
-                            <td>{row.sourceName}</td>
-                            <td>{priceLabel(row.price)}</td>
-                            <td>{row.presentation?.label || 'N/A'}</td>
-                            <td>{percentLabel(row.matchScore)}</td>
-                            <td>
-                              {row.url ? (
-                                <a href={row.url} target="_blank" rel="noreferrer">
-                                  Ver
-                                </a>
-                              ) : (
-                                'N/A'
-                              )}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-
-                  <aside className="insight-rail">
-                    <article>
-                      <h4>Mejor coincidencia global</h4>
-                      <strong>{compareData.bestOverall?.storeName || 'N/A'}</strong>
-                      <p>{compareData.bestOverall?.sourceName || 'Sin dato disponible'}</p>
-                      <p>{priceLabel(compareData.bestOverall?.price ?? null)}</p>
-                    </article>
-
-                    <article>
-                      <h4>Top tiendas por hallazgos</h4>
-                      {topStores.map(([store, amount]) => (
-                        <div className="mini-line" key={store}>
-                          <span>{store}</span>
-                          <strong>{amount}</strong>
-                        </div>
+                ) : (
+                  <>
+                    <div className="best-store-grid">
+                      {compareData.bestByStore.map((row) => (
+                        <article className="best-store-card" key={row.id}>
+                          <span>{row.storeName}</span>
+                          <strong>{priceLabel(row.price)}</strong>
+                          <p>{row.sourceName}</p>
+                          <small>{row.presentation?.label || 'Presentación no disponible'}</small>
+                        </article>
                       ))}
-                    </article>
+                    </div>
 
-                    <article>
-                      <h4>Lectura rápida</h4>
-                      <p>
-                        {filteredRanking.length > 0
-                          ? `Se analizaron ${filteredRanking.length} coincidencias para ${compareData.product}.`
-                          : 'Ajusta filtros para recuperar coincidencias.'}
-                      </p>
-                    </article>
-                  </aside>
-                </div>
+                    <div className="filters-row">
+                      <div className="store-filter">
+                        {availableStores.map((store) => (
+                          <label key={store}>
+                            <input
+                              type="checkbox"
+                              checked={selectedStores.includes(store)}
+                              onChange={() => toggleStore(store)}
+                            />
+                            {store}
+                          </label>
+                        ))}
+                      </div>
+
+                      <input
+                        type="number"
+                        min={0}
+                        value={maxPrice ?? ''}
+                        onChange={(event) => {
+                          const raw = event.target.value
+                          setMaxPrice(raw ? Number(raw) : null)
+                        }}
+                        placeholder="Precio máximo"
+                      />
+
+                      <select value={sortBy} onChange={(event) => setSortBy(event.target.value as 'price' | 'score' | 'unit')}>
+                        <option value="price">Ordenar por precio</option>
+                        <option value="score">Ordenar por score</option>
+                        <option value="unit">Ordenar por unidad</option>
+                      </select>
+                    </div>
+
+                    <div className="compare-layout">
+                      <div className="results-table-wrap">
+                        <table>
+                          <thead>
+                            <tr>
+                              <th>Tienda</th>
+                              <th>Producto encontrado</th>
+                              <th>Precio</th>
+                              <th>Presentación</th>
+                              <th>Score</th>
+                              <th>Enlace</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {filteredRanking.map((row) => (
+                              <tr key={row.id}>
+                                <td>{row.storeName}</td>
+                                <td>{row.sourceName}</td>
+                                <td>{priceLabel(row.price)}</td>
+                                <td>{row.presentation?.label || 'N/A'}</td>
+                                <td>{percentLabel(row.matchScore)}</td>
+                                <td>
+                                  {row.url ? (
+                                    <a href={row.url} target="_blank" rel="noreferrer">
+                                      Ver
+                                    </a>
+                                  ) : (
+                                    'N/A'
+                                  )}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      <aside className="insight-rail">
+                        <article>
+                          <h4>Mejor coincidencia global</h4>
+                          <strong>{compareData.bestOverall?.storeName || 'N/A'}</strong>
+                          <p>{compareData.bestOverall?.sourceName || 'Sin dato disponible'}</p>
+                          <p>{priceLabel(compareData.bestOverall?.price ?? null)}</p>
+                        </article>
+
+                        <article>
+                          <h4>Top tiendas por hallazgos</h4>
+                          {topStores.map(([store, amount]) => (
+                            <div className="mini-line" key={store}>
+                              <span>{store}</span>
+                              <strong>{amount}</strong>
+                            </div>
+                          ))}
+                        </article>
+
+                        <article>
+                          <h4>Lectura rápida</h4>
+                          <p>Se analizaron {filteredRanking.length} coincidencias para {compareData.product}.</p>
+                        </article>
+                      </aside>
+                    </div>
+                  </>
+                )}
               </>
             ) : (
               <div className="empty-panel">
@@ -689,7 +698,7 @@ function Products() {
           <section className="panel-block" id="optimize">
             <div className="panel-head">
               <h2>Optimización de lista</h2>
-              <p>Construye una lista personalizada o usa la base DANE como punto de partida.</p>
+              <p>Construye una lista personalizada o usa la canasta básica como punto de partida.</p>
             </div>
 
             <form

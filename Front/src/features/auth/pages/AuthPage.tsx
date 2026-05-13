@@ -57,7 +57,7 @@ export function Auth() {
     <div className="auth-container">
       <div className="auth-hero">
         <img src="/brand/logo-paleta.png" alt="Luvao" className="auth-logo" />
-        <h1>Comparar precios con base en la canasta DANE.</h1>
+        <h1>Comparar precios con base en la canasta básica alimentaria.</h1>
         <p>
           Una interfaz limpia para investigar el mercado, leer variaciones de precio y presentar resultados con claridad.
         </p>
@@ -72,7 +72,7 @@ export function Auth() {
         <div className="auth-copy">
           <span className="auth-kicker">Acceso seguro</span>
           <h2>{isLogin ? 'Entrar al panel' : 'Crear cuenta'}</h2>
-          <p>{isLogin ? 'Ingresa para revisar comparativas, canasta DANE y estadísticas del mercado.' : 'Regístrate para trabajar sobre el panel de análisis.'}</p>
+          <p>{isLogin ? 'Ingresa para revisar comparativas, canasta básica y estadísticas del mercado.' : 'Regístrate para trabajar sobre el panel de análisis.'}</p>
         </div>
 
         <form onSubmit={handleSubmit}>

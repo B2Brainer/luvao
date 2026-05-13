@@ -64,7 +64,7 @@ def test_scrape_vtex_queries_pages_until_results_are_exhausted():
             _make_item("1", "Aceite de Cocina Premium", "https://example.com/1", 18900),
             _make_item("2", "Vinagre Blanco", "https://example.com/2", 5400),
         ],
-        10: [
+        20: [
             _make_item("3", "Aceite de Girasol", "https://example.com/3", 21000),
         ],
     }

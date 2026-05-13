@@ -38,6 +38,24 @@ def test_basket_queries_exclude_common_search_noise():
     assert is_relevant_for_query("cafe", "Galleta Café Quindío Cafecitas con Café 280 G") is False
 
 
-def test_arroz_keeps_store_results_that_are_not_plain_rice():
-    assert is_relevant_for_query("arroz", "Arroz Achocolatado Fiocco 320g") is True
-    assert is_relevant_for_query("arroz", "Galletas de arroz integral") is True
+def test_arroz_keeps_basic_rice_and_rejects_snacks_or_desserts():
+    assert is_relevant_for_query("arroz", "Arroz Premium Albar 1000 Grs") is True
+    assert is_relevant_for_query("arroz", "Arroz Achocolatado Fiocco 320g") is False
+    assert is_relevant_for_query("arroz", "Galletas de arroz integral") is False
+
+
+def test_new_basic_basket_queries_keep_expected_products():
+    assert is_relevant_for_query("harina de trigo", "Harina de Trigo Haz de Oros 1000 g") is True
+    assert is_relevant_for_query("harina de maiz", "Harina de Maíz Doñarepa 1000 g") is True
+    assert is_relevant_for_query("galletas de sal", "Galletas Saltin Noel Tradicional 300 g") is True
+    assert is_relevant_for_query("cebolla larga", "Cebolla Larga x 500 g") is True
+    assert is_relevant_for_query("tomate de arbol", "Tomate de Árbol x kg") is True
+    assert is_relevant_for_query("queso campesino", "Queso Campesino 500 g") is True
+
+
+def test_new_basic_basket_queries_reject_common_noise():
+    assert is_relevant_for_query("tomate", "Salsa de Tomate Fruco 400 g") is False
+    assert is_relevant_for_query("tomate", "Tomate de Árbol x kg") is False
+    assert is_relevant_for_query("pasta", "Pasta Dental Colgate 75 ml") is False
+    assert is_relevant_for_query("mantequilla", "Mantequilla de Maní 500 g") is False
+    assert is_relevant_for_query("pollo", "Caldo de Gallina Sabor Pollo") is False

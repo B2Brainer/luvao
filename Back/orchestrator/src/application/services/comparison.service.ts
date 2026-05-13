@@ -28,6 +28,8 @@ type CanonicalProduct = {
     amount: number | null;
     unit: string | null;
     label: string | null;
+    baseAmount: number | null;
+    baseUnit: string | null;
   };
   pricePerUnit: number | null;
 };
@@ -65,6 +67,12 @@ const STOPWORDS = new Set([
   'kg',
   'lt',
   'l',
+  'lb',
+  'und',
+  'unds',
+  'unidad',
+  'unidades',
+  'y',
 ]);
 
 const TOKEN_SYNONYMS: Record<string, string> = {
@@ -77,6 +85,39 @@ const TOKEN_SYNONYMS: Record<string, string> = {
   vegetal: 'vegetal',
   canola: 'canola',
   girasol: 'girasol',
+  fideo: 'pasta',
+  fideos: 'pasta',
+  espagueti: 'pasta',
+  spaghetti: 'pasta',
+  macarron: 'pasta',
+  macarrones: 'pasta',
+  galleta: 'galleta',
+  galletas: 'galleta',
+  saltin: 'galleta',
+  saltinas: 'galleta',
+  cracker: 'galleta',
+  crackers: 'galleta',
+  frijol: 'frijol',
+  frijoles: 'frijol',
+  lenteja: 'lenteja',
+  lentejas: 'lenteja',
+  platano: 'platano',
+  platanos: 'platano',
+  limones: 'limon',
+  tomates: 'tomate',
+  cebollas: 'cebolla',
+  zanahorias: 'zanahoria',
+  habichuelas: 'habichuela',
+  bananos: 'banano',
+  naranjas: 'naranja',
+  guayabas: 'guayaba',
+  moras: 'mora',
+  maracuyas: 'maracuya',
+  quesos: 'queso',
+  campesinos: 'campesino',
+  margarinas: 'margarina',
+  mantequillas: 'mantequilla',
+  panelas: 'panela',
   huevo: 'huevo',
   huevos: 'huevo',
   atun: 'atún',
@@ -87,6 +128,8 @@ const TOKEN_SYNONYMS: Record<string, string> = {
   libra: 'lb',
   libras: 'lb',
 };
+
+const REQUIRED_STORE_KEYS = ['d1', 'exito', 'olimpica'];
 
 const NON_GROCERY_TOKENS = new Set([
   'bioaqua',
@@ -186,6 +229,54 @@ const EGG_NON_FOOD_STEMS = [
   'juguete',
 ];
 
+type ProductRule = {
+  all?: string[];
+  any?: string[];
+  excludeStems?: string[];
+};
+
+const PRODUCT_RULES: Record<string, ProductRule> = {
+  arroz: { all: ['arroz'], excludeStems: ['galleta', 'achocolat', 'arroz con leche', 'bebida', 'sabor'] },
+  pasta: { any: ['pasta'], excludeStems: ['pasta dental', 'pasta de tomate', 'salsa', 'crema'] },
+  'harina de trigo': { all: ['harina', 'trigo'] },
+  'harina de maiz': { all: ['harina', 'maiz'] },
+  pan: { all: ['pan'], excludeStems: ['panela', 'apanado'] },
+  'galletas de sal': { any: ['galleta'], excludeStems: ['dulce', 'chocolate', 'wafer', 'rellena', 'crema'] },
+  avena: { all: ['avena'], excludeStems: ['bebida', 'galleta', 'barra'] },
+  papa: { all: ['papa'], excludeStems: ['frita', 'chips', 'fosforo', 'margarita'] },
+  yuca: { all: ['yuca'], excludeStems: ['frita', 'chips'] },
+  'platano verde': { all: ['platano'], excludeStems: ['chips', 'maduro', 'tajada'] },
+  frijol: { all: ['frijol'], excludeStems: ['salsa', 'enlat'] },
+  lentejas: { all: ['lenteja'], excludeStems: ['sopa', 'enlat'] },
+  'arveja seca': { all: ['arveja'], excludeStems: ['congelada', 'enlatada', 'sopa'] },
+  tomate: { all: ['tomate'], excludeStems: ['tomate de arbol', 'salsa', 'pasta', 'pure', 'ketchup', 'jugo'] },
+  'cebolla cabezona': { all: ['cebolla'], excludeStems: ['cebolla larga'] },
+  'cebolla larga': { all: ['cebolla', 'larga'] },
+  zanahoria: { all: ['zanahoria'], excludeStems: ['bebida', 'jugo', 'galleta', 'dulce'] },
+  habichuela: { all: ['habichuela'], excludeStems: ['enlat'] },
+  banano: { all: ['banano'], excludeStems: ['bebida', 'jugo', 'galleta', 'dulce'] },
+  naranja: { all: ['naranja'], excludeStems: ['bebida', 'jugo', 'galleta', 'dulce'] },
+  limon: { all: ['limon'], excludeStems: ['bebida', 'jugo', 'galleta', 'limonada'] },
+  guayaba: { all: ['guayaba'], excludeStems: ['bebida', 'jugo', 'galleta', 'dulce'] },
+  mora: { all: ['mora'], excludeStems: ['bebida', 'jugo', 'galleta', 'mermelada', 'caramelo'] },
+  maracuya: { all: ['maracuya'], excludeStems: ['bebida', 'jugo', 'galleta', 'dulce'] },
+  'tomate de arbol': { all: ['tomate', 'arbol'], excludeStems: ['bebida', 'jugo'] },
+  'carne de res': { all: ['carne', 'res'], excludeStems: ['perro', 'gato', 'sabor'] },
+  'carne de cerdo': { all: ['carne', 'cerdo'], excludeStems: ['perro', 'gato', 'sabor'] },
+  pollo: { all: ['pollo'], excludeStems: ['caldo', 'consome', 'sabor', 'sazonador', 'croqueta'] },
+  pescado: { any: ['pescado', 'tilapia', 'trucha', 'mojarra', 'filete'], excludeStems: ['atun', 'sardina', 'caldo', 'sabor'] },
+  leche: { all: ['leche'], excludeStems: ['crema de leche', 'dulce de leche', 'leche condensada', 'leche de coco', 'chocolate', 'galleta', 'caramelo', 'flan', 'postre'] },
+  'queso campesino': { all: ['queso', 'campesino'], excludeStems: ['sabor', 'snack'] },
+  'aceite vegetal': { all: ['aceite'], excludeStems: ['atun', 'motor', 'motocicleta', 'automotr', 'lubric', 'masaje', 'esencial'] },
+  aceite: { all: ['aceite'], excludeStems: ['atun', 'motor', 'motocicleta', 'automotr', 'lubric', 'masaje', 'esencial'] },
+  margarina: { all: ['margarina'] },
+  mantequilla: { all: ['mantequilla'], excludeStems: ['mani', 'cacahuate', 'cacao'] },
+  azucar: { all: ['azucar'], excludeStems: ['sin azucar', '0 azucar', 'mango', 'bebida', 'galleta', 'caramelo', 'endulzado'] },
+  panela: { all: ['panela'], excludeStems: ['bebida', 'galleta', 'dulce'] },
+  sal: { all: ['sal'], excludeStems: ['salsa', 'salchicha'] },
+  cafe: { all: ['cafe'], excludeStems: ['galleta', 'cafecitas', 'dulce', 'chocolate', 'sabor cafe', 'licor'] },
+};
+
 @Injectable()
 export class ComparisonService {
   constructor(
@@ -200,27 +291,32 @@ export class ComparisonService {
     });
 
     const canonicalTarget = this.toCanonicalTokens(product);
-    const mapped = raw
+    const relevant: Array<CanonicalProduct & { relevanceScore: number }> = raw
       .map((p: RawScraped) => this.toCanonicalProduct(p))
       .map((p) => ({
         ...p,
-        matchScore: this.computeMatchScore(canonicalTarget, p.canonicalTokens),
+        relevanceScore: this.computeTextMatchScore(canonicalTarget, p.canonicalTokens),
       }))
-      .filter((p) => p.matchScore > 0.2)
+      .filter((p) => p.price !== null && p.relevanceScore > 0.2 && this.isRelevantForTarget(product, p));
+
+    const completeRelevant: Array<CanonicalProduct & { relevanceScore: number }> = this.keepOnlyCompleteStoreSet(relevant);
+    const mapped = this.withValueScores(completeRelevant)
       .sort((a, b) => {
         const byScore = b.matchScore - a.matchScore;
         if (byScore !== 0) {
           return byScore;
         }
-        return (a.price ?? Number.MAX_SAFE_INTEGER) - (b.price ?? Number.MAX_SAFE_INTEGER);
+        return (a.pricePerUnit ?? Number.MAX_SAFE_INTEGER) - (b.pricePerUnit ?? Number.MAX_SAFE_INTEGER);
       });
 
     const bestByStore = this.pickBestByStore(mapped);
+    const missingStores = this.getMissingRequiredStores(relevant);
 
     return {
       product,
       canonicalProduct: canonicalTarget,
       comparedCount: mapped.length,
+      missingStores,
       bestByStore,
       ranking: mapped,
       bestOverall: mapped[0] ?? null,
@@ -239,30 +335,34 @@ export class ComparisonService {
       const quantity = item.quantity && item.quantity > 0 ? item.quantity : 1;
       const targetTokens = this.toCanonicalTokens(item.product);
 
-      const candidates = canonicalAll
+      const relevant: Array<CanonicalProduct & { relevanceScore: number }> = canonicalAll
         .map((p) => ({
           ...p,
-          matchScore: this.computeMatchScore(targetTokens, p.canonicalTokens),
+          relevanceScore: this.computeTextMatchScore(targetTokens, p.canonicalTokens),
         }))
-        .filter((p) => p.matchScore > 0.2 && p.price !== null)
+        .filter((p) => p.relevanceScore > 0.2 && p.price !== null && this.isRelevantForTarget(item.product, p));
+
+      const completeRelevant: Array<CanonicalProduct & { relevanceScore: number }> = this.keepOnlyCompleteStoreSet(relevant);
+      const candidates = this.withValueScores(completeRelevant)
         .sort((a, b) => {
           const byScore = b.matchScore - a.matchScore;
           if (byScore !== 0) {
             return byScore;
           }
-          return (a.price ?? Number.MAX_SAFE_INTEGER) - (b.price ?? Number.MAX_SAFE_INTEGER);
+          return (a.pricePerUnit ?? Number.MAX_SAFE_INTEGER) - (b.pricePerUnit ?? Number.MAX_SAFE_INTEGER);
         });
 
       const bestByStore = this.pickBestByStore(candidates);
-      const cheapest = [...bestByStore].sort((a, b) => (a.price ?? Number.MAX_SAFE_INTEGER) - (b.price ?? Number.MAX_SAFE_INTEGER))[0] ?? null;
+      const bestValue = bestByStore[0] ?? null;
 
       return {
         requested: item.product,
         quantity,
         targetTokens,
         optionsByStore: bestByStore,
-        selected: cheapest,
-        subtotal: cheapest?.price ? cheapest.price * quantity : null,
+        missingStores: this.getMissingRequiredStores(relevant),
+        selected: bestValue,
+        subtotal: bestValue?.price ? bestValue.price * quantity : null,
       };
     });
 
@@ -304,13 +404,8 @@ export class ComparisonService {
     const price = raw.price ?? null;
 
     let pricePerUnit: number | null = null;
-    if (price !== null && presentation.amount && presentation.amount > 0 && presentation.unit) {
-      const divisor = presentation.unit === 'kg' || presentation.unit === 'l'
-        ? presentation.amount
-        : presentation.amount / 1000;
-      if (divisor > 0) {
-        pricePerUnit = Number((price / divisor).toFixed(2));
-      }
+    if (price !== null && presentation.baseAmount && presentation.baseAmount > 0) {
+      pricePerUnit = Number((price / presentation.baseAmount).toFixed(2));
     }
 
     return {
@@ -360,24 +455,84 @@ export class ComparisonService {
 
   private extractPresentation(name: string) {
     const normalized = this.normalizeTextForPresentation(name);
-    const match = normalized.match(/(\d+(?:[.,]\d{3})*(?:[.,]\d+)?)\s*(kg|g|gr|l|lt|ml)\b/);
+    const measureMatch = normalized.match(/(\d+(?:[.,]\d{3})*(?:[.,]\d+)?)\s*(kg|kilo|kilos|g|gr|grs|gramo|gramos|l|lt|litro|litros|ml|cc|lb|libra|libras)\b/);
+    const countMatch = normalized.match(/(\d+(?:[.,]\d{3})*(?:[.,]\d+)?)\s*(und|unds|unidad|unidades|u)\b/);
+    const match = measureMatch ?? countMatch;
     if (!match) {
-      return { amount: null, unit: null, label: null };
+      const packMatch = normalized.match(/\bx\s*(\d+(?:[.,]\d+)?)\b/);
+      if (packMatch) {
+        const amount = this.parseLocaleNumber(packMatch[1]);
+        return {
+          amount: Number.isNaN(amount) ? null : amount,
+          unit: 'und',
+          label: `x ${packMatch[1]} und`,
+          baseAmount: Number.isNaN(amount) ? null : amount,
+          baseUnit: 'und',
+        };
+      }
+
+      if (/\bdocena\b/.test(normalized)) {
+        return {
+          amount: 12,
+          unit: 'und',
+          label: 'docena',
+          baseAmount: 12,
+          baseUnit: 'und',
+        };
+      }
+
+      return { amount: null, unit: null, label: null, baseAmount: null, baseUnit: null };
     }
 
     const amount = this.parseLocaleNumber(match[1]);
     const unitRaw = match[2];
-    const unit = unitRaw === 'gr'
+    const unit = ['gr', 'grs', 'gramo', 'gramos'].includes(unitRaw)
       ? 'g'
-      : unitRaw === 'lt'
+      : ['lt', 'litro', 'litros'].includes(unitRaw)
       ? 'l'
+      : ['kilo', 'kilos'].includes(unitRaw)
+      ? 'kg'
+      : ['libra', 'libras'].includes(unitRaw)
+      ? 'lb'
+      : ['unds', 'unidad', 'unidades', 'u'].includes(unitRaw)
+      ? 'und'
       : unitRaw;
+    const base = this.toBasePresentationAmount(amount, unit);
 
     return {
       amount: Number.isNaN(amount) ? null : amount,
       unit,
       label: `${match[1]} ${unit}`,
+      baseAmount: base.amount,
+      baseUnit: base.unit,
     };
+  }
+
+  private toBasePresentationAmount(amount: number, unit: string): { amount: number | null; unit: string | null } {
+    if (Number.isNaN(amount) || amount <= 0) {
+      return { amount: null, unit: null };
+    }
+
+    if (unit === 'kg') {
+      return { amount, unit: 'kg' };
+    }
+    if (unit === 'g') {
+      return { amount: amount / 1000, unit: 'kg' };
+    }
+    if (unit === 'lb') {
+      return { amount: amount * 0.5, unit: 'kg' };
+    }
+    if (unit === 'l') {
+      return { amount, unit: 'l' };
+    }
+    if (unit === 'ml' || unit === 'cc') {
+      return { amount: amount / 1000, unit: 'l' };
+    }
+    if (unit === 'und') {
+      return { amount, unit: 'und' };
+    }
+
+    return { amount: null, unit: null };
   }
 
   private parseLocaleNumber(value: string): number {
@@ -407,7 +562,7 @@ export class ComparisonService {
     return Number(trimmed);
   }
 
-  private computeMatchScore(targetTokens: string[], candidateTokens: string[]): number {
+  private computeTextMatchScore(targetTokens: string[], candidateTokens: string[]): number {
     if (targetTokens.length === 0 || candidateTokens.length === 0) {
       return 0;
     }
@@ -448,12 +603,86 @@ export class ComparisonService {
     return Number(((coverage * 0.7 + jaccard * 0.3) * penalty).toFixed(4));
   }
 
+  private withValueScores<T extends CanonicalProduct & { relevanceScore: number }>(items: T[]): Array<T & { matchScore: number }> {
+    const unitPrices = items
+      .map((item) => item.pricePerUnit)
+      .filter((value): value is number => value !== null && value > 0);
+    const rawPrices = items
+      .map((item) => item.price)
+      .filter((value): value is number => value !== null && value > 0);
+
+    const bestUnitPrice = unitPrices.length ? Math.min(...unitPrices) : null;
+    const bestRawPrice = rawPrices.length ? Math.min(...rawPrices) : null;
+
+    return items.map((item) => {
+      let score = 0;
+
+      if (bestUnitPrice !== null && item.pricePerUnit && item.pricePerUnit > 0) {
+        score = bestUnitPrice / item.pricePerUnit;
+      } else if (bestUnitPrice === null && bestRawPrice !== null && item.price && item.price > 0) {
+        score = bestRawPrice / item.price;
+      }
+
+      return {
+        ...item,
+        matchScore: Number(Math.max(0, Math.min(score, 1)).toFixed(4)),
+      };
+    });
+  }
+
   private isNonGroceryToken(token: string): boolean {
     if (NON_GROCERY_TOKENS.has(token)) {
       return true;
     }
 
     return NON_GROCERY_STEMS.some((stem) => token.includes(stem));
+  }
+
+  private isRelevantForTarget(target: string, candidate: CanonicalProduct): boolean {
+    const targetNorm = this.normalizeText(target);
+    const tokens = new Set(candidate.canonicalTokens);
+    const name = candidate.normalizedName;
+    const rule = PRODUCT_RULES[targetNorm];
+
+    if (!rule) {
+      return true;
+    }
+
+    if (rule.all?.some((token) => !tokens.has(token))) {
+      return false;
+    }
+
+    if (rule.any && !rule.any.some((token) => tokens.has(token) || name.includes(token))) {
+      return false;
+    }
+
+    if (rule.excludeStems?.some((stem) => name.includes(stem))) {
+      return false;
+    }
+
+    if (targetNorm === 'cebolla cabezona' && tokens.has('larga')) {
+      return false;
+    }
+
+    if (targetNorm === 'platano verde' && tokens.has('maduro')) {
+      return false;
+    }
+
+    if (targetNorm === 'leche') {
+      const allowed = [
+        'leche entera',
+        'leche semidescremada',
+        'leche descremada',
+        'leche deslactosada',
+        'leche uht',
+        'leche larga vida',
+        'leche en polvo',
+        'leche evaporada',
+      ];
+      return allowed.some((stem) => name.includes(stem)) || tokens.has('leche');
+    }
+
+    return true;
   }
 
   private async getDefaultResearchBasket(): Promise<ResearchBasketItem[]> {
@@ -477,30 +706,61 @@ export class ComparisonService {
     }));
   }
 
-  private pickBestByStore<T extends { storeName: string; price: number | null; matchScore: number }>(items: T[]): T[] {
+  private keepOnlyCompleteStoreSet<T extends { storeName: string }>(items: T[]): T[] {
+    const missingStores = this.getMissingRequiredStores(items);
+    return missingStores.length === 0 ? items : [];
+  }
+
+  private getMissingRequiredStores<T extends { storeName: string }>(items: T[]): string[] {
+    const present = new Set(items.map((item) => this.storeKey(item.storeName)));
+    return REQUIRED_STORE_KEYS.filter((store) => !present.has(store));
+  }
+
+  private storeKey(storeName: string): string {
+    const normalized = this.normalizeText(storeName);
+    if (normalized.includes('d1')) {
+      return 'd1';
+    }
+    if (normalized.includes('exito')) {
+      return 'exito';
+    }
+    if (normalized.includes('olimpica')) {
+      return 'olimpica';
+    }
+    return normalized;
+  }
+
+  private pickBestByStore<T extends { storeName: string; price: number | null; pricePerUnit?: number | null; matchScore: number }>(items: T[]): T[] {
     const bestMap = new Map<string, T>();
 
     for (const item of items) {
-      const current = bestMap.get(item.storeName);
+      const store = this.storeKey(item.storeName);
+      const current = bestMap.get(store);
       if (!current) {
-        bestMap.set(item.storeName, item);
+        bestMap.set(store, item);
         continue;
       }
 
       if (item.matchScore > current.matchScore) {
-        bestMap.set(item.storeName, item);
+        bestMap.set(store, item);
         continue;
       }
 
       if (item.matchScore === current.matchScore) {
-        const currentPrice = current.price ?? Number.MAX_SAFE_INTEGER;
-        const itemPrice = item.price ?? Number.MAX_SAFE_INTEGER;
+        const currentPrice = current.pricePerUnit ?? current.price ?? Number.MAX_SAFE_INTEGER;
+        const itemPrice = item.pricePerUnit ?? item.price ?? Number.MAX_SAFE_INTEGER;
         if (itemPrice < currentPrice) {
-          bestMap.set(item.storeName, item);
+          bestMap.set(store, item);
         }
       }
     }
 
-    return [...bestMap.values()].sort((a, b) => (a.price ?? Number.MAX_SAFE_INTEGER) - (b.price ?? Number.MAX_SAFE_INTEGER));
+    return [...bestMap.values()].sort((a, b) => {
+      const byScore = b.matchScore - a.matchScore;
+      if (byScore !== 0) {
+        return byScore;
+      }
+      return (a.pricePerUnit ?? a.price ?? Number.MAX_SAFE_INTEGER) - (b.pricePerUnit ?? b.price ?? Number.MAX_SAFE_INTEGER);
+    });
   }
 }
