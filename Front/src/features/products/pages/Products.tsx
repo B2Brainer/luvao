@@ -141,7 +141,7 @@ function progressForStatus(status?: ScrapingJob['status']) {
 }
 
 function Products() {
-  const [productQuery, setProductQuery] = useState('arroz')
+  const [productQuery, setProductQuery] = useState('')
   const latestProductQuery = useRef(productQuery)
   const [researchBasket, setResearchBasket] = useState<BasketItem[]>([])
   const [priceStats, setPriceStats] = useState<PriceStatsResponse | null>(null)
@@ -376,13 +376,11 @@ function Products() {
     setItems((current) => current.filter((item) => item.product !== product))
   }
 
-  const runOptimize = async (fullCatalog = false) => {
+  const runOptimize = async () => {
     setOptimizeLoading(true)
     setOptimizeError('')
     try {
-      const res = fullCatalog
-        ? await orchestratorService.optimizeFullCatalog()
-        : await orchestratorService.optimizeList(items)
+      const res = await orchestratorService.optimizeList(items)
       setOptimizeData(res.data)
     } catch (err: unknown) {
       setOptimizeError(errorMessage(err, 'No se pudo optimizar la lista.'))
@@ -451,14 +449,6 @@ function Products() {
             <strong>{priceStats?.totalRecords ?? 0}</strong>
           </article>
           <article>
-            <span>Promedio general</span>
-            <strong>{priceStats ? priceLabel(priceStats.overall.avg) : 'N/A'}</strong>
-          </article>
-          <article>
-            <span>Variabilidad (CV)</span>
-            <strong>{priceStats ? percentLabel(priceStats.overall.cv) : 'N/A'}</strong>
-          </article>
-          <article>
             <span>Tiendas activas</span>
             <strong>{priceStats?.byStore.length ?? 0}</strong>
           </article>
@@ -525,9 +515,6 @@ function Products() {
             <button type="button" onClick={optimizeDaneBasket} disabled={optimizeLoading}>
               {optimizeLoading ? 'Optimizando...' : 'Optimizar canasta básica'}
             </button>
-            <button type="button" className="ghost" onClick={() => runOptimize(true)} disabled={optimizeLoading}>
-              Optimizar catálogo completo
-            </button>
           </div>
         </aside>
 
@@ -535,14 +522,13 @@ function Products() {
           <section className="panel-block">
             <div className="panel-head">
               <h2>Resultados de comparación</h2>
-              <div className="panel-head-actions">
-                <p>Filtra por tienda, límite de precio y orden de análisis.</p>
-                {compareData && (
+              {compareData && (
+                <div className="panel-head-actions">
                   <Link to={`/products/${encodeURIComponent(compareData.product)}`} className="detail-link">
                     Ver ficha del producto
                   </Link>
-                )}
-              </div>
+                </div>
+              )}
             </div>
 
             {compareError && <p className="error-line">{compareError}</p>}
@@ -710,7 +696,7 @@ function Products() {
                 placeholder="Agregar producto"
               />
               <button type="submit">Agregar</button>
-              <button type="button" className="secondary" onClick={() => runOptimize(false)} disabled={items.length === 0 || optimizeLoading}>
+              <button type="button" className="secondary" onClick={runOptimize} disabled={items.length === 0 || optimizeLoading}>
                 {optimizeLoading ? 'Optimizando...' : 'Optimizar lista'}
               </button>
             </form>
@@ -752,8 +738,8 @@ function Products() {
                 <article className="summary-card full">
                   <span>Detalle por ítem</span>
                   {optimizeData.lines.map((line) => (
-                    <div className="line" key={line.requested}>
-                      <div>
+                    <div className="line item-line" key={line.requested}>
+                      <div className="item-detail">
                         <strong>{line.requested}</strong>
                         <small>{line.selected?.storeName || 'sin coincidencia'} · {line.selected?.sourceName || 'sin opción disponible'}</small>
                       </div>

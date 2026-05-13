@@ -86,7 +86,7 @@ button:disabled {
 .kpi-strip {
   margin-top: 0.95rem;
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.65rem;
 }
 
@@ -557,6 +557,29 @@ td a {
   padding-bottom: 0.3rem;
 }
 
+.item-line {
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.item-detail {
+  flex: 1;
+  display: grid;
+  grid-template-columns: minmax(110px, 170px) minmax(0, 1fr);
+  gap: 1.3rem;
+  align-items: baseline;
+  min-width: 0;
+}
+
+.item-detail strong {
+  white-space: nowrap;
+}
+
+.item-detail small {
+  min-width: 0;
+  line-height: 1.35;
+}
+
 .error-line {
   margin-top: 0.4rem;
   font-weight: 700;
@@ -597,7 +620,8 @@ td a {
 
   .hero-search,
   .filters-row,
-  .opt-actions {
+  .opt-actions,
+  .item-detail {
     grid-template-columns: 1fr;
   }
 }
