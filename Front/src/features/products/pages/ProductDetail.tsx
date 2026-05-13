@@ -14,6 +14,7 @@ type CompareRow = {
 
 type CompareResponse = {
   product: string
+  bestByStore: CompareRow[]
   ranking: CompareRow[]
 }
 
@@ -36,6 +37,37 @@ function priceLabel(value: number | null | undefined) {
     return 'N/A'
   }
   return currency.format(value)
+}
+
+function errorMessage(error: unknown, fallback: string) {
+  if (
+    typeof error === 'object' &&
+    error !== null &&
+    'response' in error &&
+    typeof error.response === 'object' &&
+    error.response !== null &&
+    'data' in error.response &&
+    typeof error.response.data === 'object' &&
+    error.response.data !== null &&
+    'message' in error.response.data &&
+    typeof error.response.data.message === 'string'
+  ) {
+    return error.response.data.message
+  }
+
+  return fallback
+}
+
+function uniqueCompareRows(rows: CompareRow[]) {
+  const seen = new Set<string>()
+  return rows.filter((row) => {
+    const key = row.id || `${row.storeName}-${row.sourceName}-${row.price ?? 'na'}`
+    if (seen.has(key)) {
+      return false
+    }
+    seen.add(key)
+    return true
+  })
 }
 
 export default function ProductDetail() {
@@ -67,8 +99,8 @@ export default function ProductDetail() {
 
         setCompareData(compareRes.data)
         setStatsData(statsRes.data)
-      } catch (err: any) {
-        setError(err.response?.data?.message || 'No se pudo cargar la ficha del producto.')
+      } catch (err: unknown) {
+        setError(errorMessage(err, 'No se pudo cargar la ficha del producto.'))
       } finally {
         setLoading(false)
       }
@@ -77,7 +109,13 @@ export default function ProductDetail() {
     loadData()
   }, [productQuery])
 
-  const ranking = useMemo(() => compareData?.ranking ?? [], [compareData])
+  const ranking = useMemo(
+    () => uniqueCompareRows([
+      ...(compareData?.bestByStore ?? []),
+      ...(compareData?.ranking ?? []),
+    ]),
+    [compareData],
+  )
 
   const bestPrice = useMemo(() => {
     const prices = ranking.map((p) => p.price).filter((p): p is number => p !== null)

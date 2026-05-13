@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { orchestratorService } from '../../../services/api'
 import '../styles/Products.css'
@@ -95,6 +95,41 @@ function percentLabel(value: number | null | undefined) {
   return `${(value * 100).toFixed(1)}%`
 }
 
+function errorMessage(error: unknown, fallback: string) {
+  if (
+    typeof error === 'object' &&
+    error !== null &&
+    'response' in error &&
+    typeof error.response === 'object' &&
+    error.response !== null &&
+    'data' in error.response &&
+    typeof error.response.data === 'object' &&
+    error.response.data !== null &&
+    'message' in error.response.data &&
+    typeof error.response.data.message === 'string'
+  ) {
+    return error.response.data.message
+  }
+
+  if (error instanceof Error && error.message) {
+    return error.message
+  }
+
+  return fallback
+}
+
+function uniqueCompareRows(rows: CompareRow[]) {
+  const seen = new Set<string>()
+  return rows.filter((row) => {
+    const key = row.id || `${row.storeName}-${row.sourceName}-${row.price ?? 'na'}`
+    if (seen.has(key)) {
+      return false
+    }
+    seen.add(key)
+    return true
+  })
+}
+
 function progressForStatus(status?: ScrapingJob['status']) {
   if (status === 'pending') {
     return 25
@@ -107,6 +142,7 @@ function progressForStatus(status?: ScrapingJob['status']) {
 
 function Products() {
   const [productQuery, setProductQuery] = useState('arroz')
+  const latestProductQuery = useRef(productQuery)
   const [catalogProducts, setCatalogProducts] = useState<string[]>([])
   const [researchBasket, setResearchBasket] = useState<BasketItem[]>([])
   const [priceStats, setPriceStats] = useState<PriceStatsResponse | null>(null)
@@ -172,13 +208,53 @@ function Products() {
     return () => clearInterval(interval)
   }, [scrapeJob])
 
-  const availableStores = useMemo(() => {
-    const stores = new Set((compareData?.ranking ?? []).map((item) => item.storeName))
-    return Array.from(stores)
+  useEffect(() => {
+    latestProductQuery.current = productQuery
+  }, [productQuery])
+
+  useEffect(() => {
+    if (scrapeJob?.status !== 'success') {
+      return
+    }
+
+    const refreshVisibleData = async () => {
+      const currentQuery = latestProductQuery.current.trim()
+      try {
+        const [statsRes, compareRes] = await Promise.all([
+          orchestratorService.getPriceStats({ days: 7 }),
+          currentQuery
+            ? orchestratorService.compareProduct(currentQuery)
+            : Promise.resolve(null),
+        ])
+
+        setPriceStats(statsRes.data)
+        if (compareRes) {
+          setCompareData(compareRes.data)
+          setSelectedStores([])
+          setMaxPrice(null)
+        }
+      } catch {
+        setScrapeError('El scraping terminó, pero no se pudo refrescar el panel automáticamente.')
+      }
+    }
+
+    refreshVisibleData()
+  }, [scrapeJob?.status])
+
+  const comparisonRows = useMemo(() => {
+    return uniqueCompareRows([
+      ...(compareData?.bestByStore ?? []),
+      ...(compareData?.ranking ?? []),
+    ])
   }, [compareData])
 
+  const availableStores = useMemo(() => {
+    const stores = new Set(comparisonRows.map((item) => item.storeName))
+    return Array.from(stores)
+  }, [comparisonRows])
+
   const filteredRanking = useMemo(() => {
-    let rows = [...(compareData?.ranking ?? [])]
+    let rows = [...comparisonRows]
 
     if (selectedStores.length > 0) {
       rows = rows.filter((row) => selectedStores.includes(row.storeName))
@@ -199,7 +275,7 @@ function Products() {
     })
 
     return rows
-  }, [compareData, selectedStores, maxPrice, sortBy])
+  }, [comparisonRows, selectedStores, maxPrice, sortBy])
 
   const compareMetrics = useMemo(() => {
     if (!compareData || filteredRanking.length === 0) {
@@ -245,7 +321,8 @@ function Products() {
     return Array.from(map.entries())
   }, [researchBasket])
 
-  const handleCompare = async () => {
+  const handleCompare = async (event?: FormEvent) => {
+    event?.preventDefault()
     if (!productQuery.trim()) {
       return
     }
@@ -257,8 +334,8 @@ function Products() {
       setCompareData(res.data)
       setSelectedStores([])
       setMaxPrice(null)
-    } catch (err: any) {
-      setCompareError(err.response?.data?.message || 'No se pudo comparar el producto.')
+    } catch (err: unknown) {
+      setCompareError(errorMessage(err, 'No se pudo comparar el producto.'))
       setCompareData(null)
     } finally {
       setCompareLoading(false)
@@ -316,8 +393,8 @@ function Products() {
         ? await orchestratorService.optimizeFullCatalog()
         : await orchestratorService.optimizeList(items)
       setOptimizeData(res.data)
-    } catch (err: any) {
-      setOptimizeError(err.response?.data?.message || 'No se pudo optimizar la lista.')
+    } catch (err: unknown) {
+      setOptimizeError(errorMessage(err, 'No se pudo optimizar la lista.'))
       setOptimizeData(null)
     } finally {
       setOptimizeLoading(false)
@@ -330,8 +407,8 @@ function Products() {
     try {
       const res = await orchestratorService.optimizeList([])
       setOptimizeData(res.data)
-    } catch (err: any) {
-      setOptimizeError(err.response?.data?.message || 'No se pudo optimizar la canasta DANE.')
+    } catch (err: unknown) {
+      setOptimizeError(errorMessage(err, 'No se pudo optimizar la canasta DANE.'))
       setOptimizeData(null)
     } finally {
       setOptimizeLoading(false)
@@ -347,8 +424,8 @@ function Products() {
         throw new Error('El backend no devolvió jobId para seguimiento en tiempo real.')
       }
       setScrapeJob({ id: res.data.jobId, status: res.data.jobStatus || 'pending' })
-    } catch (err: any) {
-      setScrapeError(err.response?.data?.message || err.message || 'No se pudo iniciar el scraping.')
+    } catch (err: unknown) {
+      setScrapeError(errorMessage(err, 'No se pudo iniciar el scraping.'))
       setScrapeJob(null)
     } finally {
       setScrapeLoading(false)
@@ -371,7 +448,7 @@ function Products() {
           Base estadística en tiempo real, comparación por tienda y optimización de canasta familiar sin perder la trazabilidad.
         </p>
 
-        <div className="hero-search">
+        <form className="hero-search" onSubmit={handleCompare}>
           <input
             list="catalog-products"
             value={productQuery}
@@ -383,10 +460,10 @@ function Products() {
               <option value={product} key={product} />
             ))}
           </datalist>
-          <button onClick={handleCompare} disabled={compareLoading}>
+          <button type="submit" disabled={compareLoading}>
             {compareLoading ? 'Comparando...' : 'Comparar'}
           </button>
-        </div>
+        </form>
 
         <div className="kpi-strip">
           <article>
@@ -434,7 +511,7 @@ function Products() {
 
           <div className="rail-card">
             <h3>Scraping en vivo</h3>
-            <button className="secondary" onClick={triggerScraping} disabled={scrapeLoading}>
+            <button type="button" className="secondary" onClick={triggerScraping} disabled={scrapeLoading}>
               {scrapeLoading ? 'Iniciando...' : 'Actualizar precios ahora'}
             </button>
 
@@ -465,10 +542,10 @@ function Products() {
 
           <div className="rail-card">
             <h3>Acciones rápidas</h3>
-            <button onClick={optimizeDaneBasket} disabled={optimizeLoading}>
+            <button type="button" onClick={optimizeDaneBasket} disabled={optimizeLoading}>
               {optimizeLoading ? 'Optimizando...' : 'Optimizar canasta DANE'}
             </button>
-            <button className="ghost" onClick={() => runOptimize(true)} disabled={optimizeLoading}>
+            <button type="button" className="ghost" onClick={() => runOptimize(true)} disabled={optimizeLoading}>
               Optimizar catálogo completo
             </button>
           </div>
@@ -513,6 +590,17 @@ function Products() {
 
             {compareData ? (
               <>
+                <div className="best-store-grid">
+                  {compareData.bestByStore.map((row) => (
+                    <article className="best-store-card" key={row.id}>
+                      <span>{row.storeName}</span>
+                      <strong>{priceLabel(row.price)}</strong>
+                      <p>{row.sourceName}</p>
+                      <small>{row.presentation?.label || 'Presentación no disponible'}</small>
+                    </article>
+                  ))}
+                </div>
+
                 <div className="filters-row">
                   <div className="store-filter">
                     {availableStores.map((store) => (
@@ -624,29 +712,35 @@ function Products() {
               <p>Construye una lista personalizada o usa la base DANE como punto de partida.</p>
             </div>
 
-            <div className="opt-actions">
+            <form
+              className="opt-actions"
+              onSubmit={(event) => {
+                event.preventDefault()
+                addItem()
+              }}
+            >
               <input
                 list="catalog-products"
                 value={itemsInput}
                 onChange={(event) => setItemsInput(event.target.value)}
                 placeholder="Agregar producto"
               />
-              <button onClick={addItem}>Agregar</button>
-              <button className="secondary" onClick={() => runOptimize(false)} disabled={items.length === 0 || optimizeLoading}>
+              <button type="submit">Agregar</button>
+              <button type="button" className="secondary" onClick={() => runOptimize(false)} disabled={items.length === 0 || optimizeLoading}>
                 {optimizeLoading ? 'Optimizando...' : 'Optimizar lista'}
               </button>
-            </div>
+            </form>
 
             <div className="chips-row">
               {items.map((item) => (
                 <div className="chip" key={item.product}>
                   <strong>{item.product}</strong>
                   <div className="qty-controls">
-                    <button onClick={() => changeQuantity(item.product, -1)}>-</button>
+                    <button type="button" onClick={() => changeQuantity(item.product, -1)}>-</button>
                     <span>{item.quantity}</span>
-                    <button onClick={() => changeQuantity(item.product, 1)}>+</button>
+                    <button type="button" onClick={() => changeQuantity(item.product, 1)}>+</button>
                   </div>
-                  <button className="remove" onClick={() => removeItem(item.product)}>x</button>
+                  <button type="button" className="remove" onClick={() => removeItem(item.product)}>x</button>
                 </div>
               ))}
             </div>

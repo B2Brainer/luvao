@@ -77,6 +77,8 @@ const TOKEN_SYNONYMS: Record<string, string> = {
   vegetal: 'vegetal',
   canola: 'canola',
   girasol: 'girasol',
+  huevo: 'huevo',
+  huevos: 'huevo',
   atun: 'atún',
   atunes: 'atún',
   pack: 'paq',

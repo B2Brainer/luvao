@@ -3,6 +3,25 @@ import { authService } from '../../../services/api'
 import { useNavigate } from 'react-router-dom'
 import '../styles/Auth.css'
 
+function errorMessage(error: unknown) {
+  if (
+    typeof error === 'object' &&
+    error !== null &&
+    'response' in error &&
+    typeof error.response === 'object' &&
+    error.response !== null &&
+    'data' in error.response &&
+    typeof error.response.data === 'object' &&
+    error.response.data !== null &&
+    'message' in error.response.data &&
+    typeof error.response.data.message === 'string'
+  ) {
+    return error.response.data.message
+  }
+
+  return 'Error en la operación'
+}
+
 export function Auth() {
   const [isLogin, setIsLogin] = useState(true)
   const [email, setEmail] = useState('')
@@ -27,8 +46,8 @@ export function Auth() {
         await authService.register(name, email, password)
         setIsLogin(true) // Cambiar a login una vez registrado
       }
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Error en la operación')
+    } catch (err: unknown) {
+      setError(errorMessage(err))
     } finally {
       setLoading(false)
     }
@@ -116,4 +135,3 @@ export function Auth() {
 }
 
 export default Auth
-
