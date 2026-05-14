@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Auth } from './features/auth/pages/AuthPage'
 import Products from './features/products/pages/Products'
 import Header from './features/products/components/Header'
+import Statistics from './features/statistics/pages/Statistics'
 import './App.css'
 
 function App() {
@@ -26,6 +27,15 @@ function App() {
           element={
             <MainLayout>
               <Products />
+            </MainLayout>
+          }
+        />
+
+        <Route
+          path="/statistics"
+          element={
+            <MainLayout>
+              <Statistics />
             </MainLayout>
           }
         />

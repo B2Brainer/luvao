@@ -47,6 +47,11 @@
   color: #111827;
 }
 
+.header-nav a.active {
+  border-color: var(--navy-900);
+  color: var(--navy-900);
+}
+
 .header-actions a {
   text-decoration: none;
   color: var(--navy-900);

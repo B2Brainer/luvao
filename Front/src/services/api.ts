@@ -13,6 +13,13 @@ export const api = axios.create({
   },
 })
 
+type OptimizeListItem = { product: string; quantity?: number }
+type OptimizeListPayload = {
+  items?: OptimizeListItem[]
+  periodDays?: number
+  targetCalories?: number
+}
+
 // -------- AUTH SERVICE --------
 export const authService = {
   login: (email: string, password: string) =>
@@ -80,8 +87,8 @@ export const orchestratorService = {
   compareProduct: (product: string) =>
     api.get(`/orchestrator/compare/${encodeURIComponent(product)}`),
 
-  optimizeList: (items: Array<{ product: string; quantity?: number }>) =>
-    api.post('/orchestrator/optimize-list', { items }),
+  optimizeList: (payload: OptimizeListItem[] | OptimizeListPayload = []) =>
+    api.post('/orchestrator/optimize-list', Array.isArray(payload) ? { items: payload } : payload),
 }
 
 
