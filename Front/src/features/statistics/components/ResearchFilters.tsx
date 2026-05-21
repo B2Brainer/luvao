@@ -16,7 +16,7 @@ export default function ResearchFilters({
   return (
     <section className="research-filter-card">
       <h2>Parametros de investigacion</h2>
-      <p>Ajusta el escenario para recalcular costo, cobertura y series sin salir de la pagina.</p>
+      <p>Ajusta el escenario para recalcular costo, cobertura y referencias de mercado sin salir de la pagina.</p>
 
       <div className="research-filter-grid">
         <label className="form-field">
@@ -77,7 +77,7 @@ export default function ResearchFilters({
         </label>
 
         <label className="form-field">
-          <span>Ventana historica</span>
+          <span>Ventana de referencia</span>
           <select
             value={filters.priceWindowDays}
             onChange={(event) => onChange({ priceWindowDays: Number(event.target.value) || 30 })}
@@ -91,7 +91,7 @@ export default function ResearchFilters({
         </label>
 
         <label className="form-field full">
-          <span>Producto para series y estadisticas</span>
+          <span>Producto de referencia</span>
           <select
             value={filters.priceQuery}
             onChange={(event) => onChange({ priceQuery: event.target.value })}
@@ -103,7 +103,7 @@ export default function ResearchFilters({
         </label>
 
         <label className="form-field full">
-          <span>Tienda para detalle temporal</span>
+          <span>Tienda de referencia</span>
           <select
             value={filters.priceStoreName}
             onChange={(event) => onChange({ priceStoreName: event.target.value })}
@@ -119,8 +119,8 @@ export default function ResearchFilters({
       <div className="research-filter-note">
         <strong>Lectura recomendada</strong>
         <p>
-          Cambia primero personas y tiempo para ver costo total. Luego ajusta producto y tienda para bajar al
-          comportamiento historico del precio.
+          Cambia primero personas y tiempo para ver costo total. Luego ajusta producto y tienda para contextualizar
+          mejor los registros observados en la vista.
         </p>
       </div>
     </section>

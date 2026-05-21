@@ -7,8 +7,6 @@ import {
   CartesianGrid,
   Cell,
   Legend,
-  Line,
-  LineChart,
   Pie,
   PieChart,
   ResponsiveContainer,
@@ -17,10 +15,8 @@ import {
   YAxis,
 } from 'recharts'
 import KpiGrid from '../components/KpiGrid'
-import MethodologyPanel from '../components/MethodologyPanel'
 import ResearchFilters from '../components/ResearchFilters'
 import {
-  usePriceSeries,
   usePriceStats,
   useProjectionScenarios,
   useResearchBasket,
@@ -29,9 +25,7 @@ import {
 import {
   buildCategoryTargetRows,
   buildCoverageRows,
-  buildPriceSeriesRows,
   buildStoreSpendRows,
-  buildStoreStatsRows,
   compactNumber,
   computeSavingsPotential,
   formatCalories,
@@ -77,7 +71,6 @@ export default function Statistics() {
   const scenarioQuery = useResearchScenario(filters)
   const projectionQuery = useProjectionScenarios(filters)
   const priceStatsQuery = usePriceStats(queryFilters)
-  const priceSeriesQuery = usePriceSeries(queryFilters)
 
   const scenario = scenarioQuery.data ?? null
   const periodDays = toPeriodDays(filters.timeUnit, filters.durationValue)
@@ -94,8 +87,6 @@ export default function Statistics() {
   const coverageRows = buildCoverageRows(scenario?.lines ?? [])
   const storeSpendRows = buildStoreSpendRows(scenario)
   const savings = computeSavingsPotential(scenario?.lines ?? [])
-  const priceSeriesRows = buildPriceSeriesRows(priceSeriesQuery.data, filters.priceStoreName)
-  const storeStatsRows = buildStoreStatsRows(priceStatsQuery.data)
   const projectionRows = projectionQuery.data
     .filter((item) => item.scenario)
     .map((item) => ({
@@ -109,19 +100,17 @@ export default function Statistics() {
         : 0,
     }))
 
-  const overallStats = priceStatsQuery.data?.overall ?? null
-  const isRefreshing = scenarioQuery.isFetching || projectionQuery.isFetching || priceStatsQuery.isFetching || priceSeriesQuery.isFetching
-  const unresolvedItems = scenario?.unresolvedItems ?? []
+  const isRefreshing = scenarioQuery.isFetching || projectionQuery.isFetching || priceStatsQuery.isFetching
 
   return (
     <div className="statistics-shell">
       <section className="statistics-hero">
         <div className="statistics-hero-copy">
           <span className="statistics-eyebrow">Investigacion</span>
-          <h1>Analiza gasto, cobertura y dinamica de precios de la canasta familiar.</h1>
+          <h1>Analiza gasto, cobertura y sensibilidad del optimizador para la canasta familiar.</h1>
           <p>
-            Esta vista combina el optimizador de la canasta DANE con estadisticas descriptivas y series de precio
-            para que investigadores y medios exploren escenarios realistas por personas, calorias y horizonte temporal.
+            Esta vista combina el optimizador de la canasta DANE con visualizaciones de costo y cobertura
+            para explorar escenarios realistas por personas, calorias y horizonte temporal sin ruido adicional.
           </p>
 
           <div className="statistics-meta-row">
@@ -168,12 +157,6 @@ export default function Statistics() {
             onChange={(patch) => setFilters((current) => ({ ...current, ...patch }))}
             productOptions={productOptions}
             storeOptions={storeOptions}
-          />
-
-          <MethodologyPanel
-            householdSize={filters.householdSize}
-            periodDays={periodDays}
-            dailyCaloriesPerPerson={filters.dailyCaloriesPerPerson}
           />
         </aside>
 
@@ -360,140 +343,6 @@ export default function Statistics() {
               )}
             </article>
 
-            <article className="statistics-card statistics-card-wide">
-              <div className="statistics-card-head">
-                <div>
-                  <h3>Tendencia de precios</h3>
-                  <p>
-                    Serie temporal de minimo, promedio y maximo para {activePriceQuery || 'la seleccion actual'}
-                    {filters.priceStoreName ? ` en ${filters.priceStoreName}` : ' en todas las tiendas'}.
-                  </p>
-                </div>
-                <span className="chart-caption">Ventana {filters.priceWindowDays} dias</span>
-              </div>
-
-              {priceSeriesQuery.error ? (
-                <div className="empty-state">
-                  <h4>No fue posible cargar la serie temporal.</h4>
-                  <p>{priceSeriesQuery.error instanceof Error ? priceSeriesQuery.error.message : 'Error desconocido.'}</p>
-                </div>
-              ) : !priceSeriesRows.length ? (
-                <div className="loading-block">Cargando puntos historicos...</div>
-              ) : (
-                <div className="chart-shell">
-                  <ResponsiveContainer width="100%" height={320}>
-                    <LineChart data={priceSeriesRows}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(20,32,51,0.08)" />
-                      <XAxis dataKey="date" stroke="#526173" />
-                      <YAxis stroke="#526173" tickFormatter={(value: number) => formatCurrency(value)} width={96} />
-                      <Tooltip
-                        formatter={(value, name) => {
-                          const numericValue = tooltipNumber(value)
-
-                          if (name === 'min') {
-                            return [formatCurrency(numericValue), 'Minimo']
-                          }
-                          if (name === 'max') {
-                            return [formatCurrency(numericValue), 'Maximo']
-                          }
-                          return [formatCurrency(numericValue), 'Promedio']
-                        }}
-                        contentStyle={{ borderRadius: 12, borderColor: 'rgba(14,23,46,0.08)' }}
-                      />
-                      <Legend />
-                      <Line type="monotone" dataKey="min" stroke="#0f766e" strokeWidth={2} dot={false} name="Minimo" />
-                      <Line type="monotone" dataKey="avg" stroke="#2563eb" strokeWidth={3} dot={false} name="Promedio" />
-                      <Line type="monotone" dataKey="max" stroke="#ef4444" strokeWidth={2} dot={false} name="Maximo" />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-              )}
-            </article>
-
-            <article className="statistics-card">
-              <div className="statistics-card-head">
-                <div>
-                  <h3>Estadisticas descriptivas de precio</h3>
-                  <p>Resumen para lectura rapida de estabilidad, dispersion y rango observado.</p>
-                </div>
-              </div>
-
-              <div className="stats-overview">
-                <article>
-                  <span>Promedio</span>
-                  <strong>{formatCurrency(overallStats?.avg)}</strong>
-                </article>
-                <article>
-                  <span>Minimo</span>
-                  <strong>{formatCurrency(overallStats?.min)}</strong>
-                </article>
-                <article>
-                  <span>Maximo</span>
-                  <strong>{formatCurrency(overallStats?.max)}</strong>
-                </article>
-                <article>
-                  <span>Coef. variacion</span>
-                  <strong>{formatPercent(overallStats?.cv)}</strong>
-                </article>
-              </div>
-
-              <div className="table-wrap">
-                <table className="statistics-table">
-                  <thead>
-                    <tr>
-                      <th>Tienda</th>
-                      <th>Promedio</th>
-                      <th>Rango</th>
-                      <th>CV</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {storeStatsRows.slice(0, 6).map((row) => (
-                      <tr key={row.storeName}>
-                        <td>{row.storeName}</td>
-                        <td>{formatCurrency(row.avg)}</td>
-                        <td>{formatCurrency(row.min)} - {formatCurrency(row.max)}</td>
-                        <td>{formatPercent(row.cv)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </article>
-
-            <article className="statistics-card">
-              <div className="statistics-card-head">
-                <div>
-                  <h3>Items sin match y notas rapidas</h3>
-                  <p>Sirve para documentar brechas de cobertura y oportunidades de mejora del scraping.</p>
-                </div>
-              </div>
-
-              {unresolvedItems.length ? (
-                <div className="statistics-chip-row">
-                  {unresolvedItems.map((item) => (
-                    <span className="statistics-chip alert" key={item}>{item}</span>
-                  ))}
-                </div>
-              ) : (
-                <div className="empty-state compact">
-                  <h4>Sin pendientes visibles.</h4>
-                  <p>El escenario actual encontro match para todos los items solicitados.</p>
-                </div>
-              )}
-
-              <ul className="insight-list">
-                <li>
-                  Ahorro potencial frente a la opcion comparable mas costosa: <strong>{formatCurrency(savings.total)}</strong>.
-                </li>
-                <li>
-                  Se analizaron <strong>{compactNumber(priceStatsQuery.data?.totalRecords ?? 0)}</strong> registros en la ventana activa.
-                </li>
-                <li>
-                  El calculo temporal usa equivalencias practicas: semanas x 7 y meses x 30 dias.
-                </li>
-              </ul>
-            </article>
           </div>
         </div>
       </section>
