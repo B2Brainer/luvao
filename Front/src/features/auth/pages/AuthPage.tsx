@@ -56,79 +56,88 @@ export function Auth() {
   return (
     <div className="auth-container">
       <div className="auth-hero">
-        <img src="/brand/logo-paleta.png" alt="Luvao" className="auth-logo" />
-        <h1>Comparar precios con base en la canasta básica alimentaria.</h1>
-        <p>
-          Una interfaz limpia para investigar el mercado, leer variaciones de precio y presentar resultados con claridad.
-        </p>
-        <div className="auth-pills">
-          <span>Investigación</span>
-          <span>Estadística descriptiva</span>
-          <span>Comparación real</span>
-        </div>
+        <img src="/brand/logo-front-transparent-clean.png" alt="Luvao" className="auth-logo" />
       </div>
 
       <div className="auth-box">
+        <div className="auth-switch" aria-label="Seleccionar acceso">
+          <button
+            type="button"
+            className={isLogin ? 'active' : ''}
+            onClick={() => setIsLogin(true)}
+            aria-pressed={isLogin}
+          >
+            Entrar
+          </button>
+          <button
+            type="button"
+            className={!isLogin ? 'active' : ''}
+            onClick={() => setIsLogin(false)}
+            aria-pressed={!isLogin}
+          >
+            Crear cuenta
+          </button>
+        </div>
+
         <div className="auth-copy">
-          <span className="auth-kicker">Acceso seguro</span>
-          <h2>{isLogin ? 'Entrar al panel' : 'Crear cuenta'}</h2>
-          <p>{isLogin ? 'Ingresa para revisar comparativas, canasta básica y estadísticas del mercado.' : 'Regístrate para trabajar sobre el panel de análisis.'}</p>
+          <h2>{isLogin ? 'Entrar al panel' : 'Abrir tu cuenta'}</h2>
         </div>
 
         <form onSubmit={handleSubmit}>
           {!isLogin && (
-            <input
-              type="text"
-              placeholder="Nombre"
-              value={name}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                setName(e.target.value)
-              }
-              required
-            />
+            <label className="auth-field">
+              <span>Nombre</span>
+              <input
+                type="text"
+                placeholder="Tu nombre"
+                value={name}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                  setName(e.target.value)
+                }
+                autoComplete="name"
+                required
+              />
+            </label>
           )}
 
-          <input
-            type="email"
-            placeholder="Correo electrónico"
-            value={email}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-              setEmail(e.target.value)
-            }
-            required
-          />
+          <label className="auth-field">
+            <span>Correo electrónico</span>
+            <input
+              type="email"
+              placeholder="nombre@correo.com"
+              value={email}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                setEmail(e.target.value)
+              }
+              autoComplete="email"
+              required
+            />
+          </label>
 
-          <input
-            type="password"
-            placeholder="Contraseña"
-            value={password}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-              setPassword(e.target.value)
-            }
-            required
-          />
+          <label className="auth-field">
+            <span>Contraseña</span>
+            <input
+              type="password"
+              placeholder="Tu contraseña"
+              value={password}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                setPassword(e.target.value)
+              }
+              autoComplete={isLogin ? 'current-password' : 'new-password'}
+              required
+            />
+          </label>
 
           <button type="submit" disabled={loading}>
             {loading
               ? 'Cargando...'
               : isLogin
-              ? 'Entrar'
-              : 'Registrarse'}
+              ? 'Entrar al panel'
+              : 'Crear mi cuenta'}
           </button>
         </form>
 
         {error && <p className="error">{error}</p>}
-
-        <p className="toggle-copy">
-          {isLogin ? '¿No tienes cuenta?' : '¿Ya tienes cuenta?'}
-          <button
-            type="button"
-            onClick={() => setIsLogin(!isLogin)}
-            className="toggle-btn"
-          >
-            {isLogin ? 'Registrarse' : 'Entrar'}
-          </button>
-        </p>
       </div>
     </div>
   )
