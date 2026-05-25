@@ -146,6 +146,115 @@ function uniqueCompareRows(rows: CompareRow[]) {
   })
 }
 
+type SortMode = 'price' | 'score' | 'presentation'
+
+const preferredStoreOrder = ['olimpica', 'd1', 'carulla', 'exito']
+
+const presentationUnitPriority: Record<string, number> = {
+  und: 0,
+  unds: 0,
+  ud: 0,
+  uds: 0,
+  unidad: 0,
+  unidades: 0,
+  u: 0,
+  mg: 1,
+  g: 1,
+  gr: 1,
+  grs: 1,
+  gramo: 1,
+  gramos: 1,
+  kg: 1,
+  kgs: 1,
+  kilogramo: 1,
+  kilogramos: 1,
+  oz: 1,
+  onza: 1,
+  onzas: 1,
+  lb: 1,
+  lbs: 1,
+  libra: 1,
+  libras: 1,
+  ml: 2,
+  mililitro: 2,
+  mililitros: 2,
+  l: 2,
+  lt: 2,
+  lts: 2,
+  litro: 2,
+  litros: 2,
+}
+
+const presentationUnitScale: Record<string, number> = {
+  und: 1,
+  unds: 1,
+  ud: 1,
+  uds: 1,
+  unidad: 1,
+  unidades: 1,
+  u: 1,
+  mg: 0.001,
+  g: 1,
+  gr: 1,
+  grs: 1,
+  gramo: 1,
+  gramos: 1,
+  kg: 1000,
+  kgs: 1000,
+  kilogramo: 1000,
+  kilogramos: 1000,
+  oz: 28.3495,
+  onza: 28.3495,
+  onzas: 28.3495,
+  lb: 453.592,
+  lbs: 453.592,
+  libra: 453.592,
+  libras: 453.592,
+  ml: 1,
+  mililitro: 1,
+  mililitros: 1,
+  l: 1000,
+  lt: 1000,
+  lts: 1000,
+  litro: 1000,
+  litros: 1000,
+}
+
+function parsePresentationValue(label?: string | null) {
+  if (!label) {
+    return null
+  }
+
+  const matches = Array.from(
+    label.toLowerCase().matchAll(/(\d+(?:[.,]\d+)?)\s*(kilogramos?|kgs?|kg|gramos?|grs?|gr|g|miligramos?|mg|libras?|lbs?|lb|onzas?|oz|mililitros?|ml|litros?|lts?|lt|l|unidades?|unidad|unds?|uds?|und|ud|u)\b/g),
+  )
+
+  if (matches.length === 0) {
+    return null
+  }
+
+  const parsed = matches
+    .map((match) => {
+      const amount = Number(match[1].replace(',', '.'))
+      const unit = match[2]
+      const priority = presentationUnitPriority[unit]
+      const scale = presentationUnitScale[unit]
+
+      if (Number.isNaN(amount) || priority === undefined || scale === undefined) {
+        return null
+      }
+
+      return {
+        priority,
+        value: amount * scale,
+      }
+    })
+    .filter((entry): entry is { priority: number; value: number } => entry !== null)
+    .sort((a, b) => a.priority - b.priority || a.value - b.value)
+
+  return parsed[0] ?? null
+}
+
 function progressForStatus(status?: ScrapingJob['status']) {
   if (status === 'pending') {
     return 25
@@ -167,8 +276,8 @@ function Products() {
   const [compareData, setCompareData] = useState<CompareResponse | null>(null)
 
   const [selectedStores, setSelectedStores] = useState<string[]>([])
-  const [maxPrice, setMaxPrice] = useState<number | null>(null)
-  const [sortBy, setSortBy] = useState<'price' | 'score' | 'unit'>('price')
+  const [nameFilter, setNameFilter] = useState('')
+  const [sortBy, setSortBy] = useState<SortMode>('price')
 
   const [itemsInput, setItemsInput] = useState('')
   const [items, setItems] = useState<Array<{ product: string; quantity: number }>>([])
@@ -238,7 +347,7 @@ function Products() {
         if (compareRes) {
           setCompareData(compareRes.data)
           setSelectedStores([])
-          setMaxPrice(null)
+          setNameFilter('')
         }
       } catch {
         setScrapeError('El scraping terminó, pero no se pudo refrescar el panel automáticamente.')
@@ -257,32 +366,63 @@ function Products() {
 
   const availableStores = useMemo(() => {
     const stores = new Set(comparisonRows.map((item) => item.storeName))
-    return Array.from(stores)
+    return Array.from(stores).sort((left, right) => {
+      const leftIndex = preferredStoreOrder.indexOf(left.toLowerCase())
+      const rightIndex = preferredStoreOrder.indexOf(right.toLowerCase())
+      const leftRank = leftIndex === -1 ? Number.MAX_SAFE_INTEGER : leftIndex
+      const rightRank = rightIndex === -1 ? Number.MAX_SAFE_INTEGER : rightIndex
+
+      if (leftRank !== rightRank) {
+        return leftRank - rightRank
+      }
+
+      return left.localeCompare(right, 'es', { sensitivity: 'base' })
+    })
   }, [comparisonRows])
 
   const filteredRanking = useMemo(() => {
     let rows = [...comparisonRows]
 
-    if (selectedStores.length > 0) {
-      rows = rows.filter((row) => selectedStores.includes(row.storeName))
+    const normalizedNameFilter = nameFilter.trim().toLowerCase()
+
+    if (normalizedNameFilter) {
+      rows = rows.filter((row) => row.sourceName.toLowerCase().includes(normalizedNameFilter))
     }
 
-    if (maxPrice !== null && !Number.isNaN(maxPrice)) {
-      rows = rows.filter((row) => row.price !== null && row.price <= maxPrice)
+    if (selectedStores.length > 0) {
+      rows = rows.filter((row) => selectedStores.includes(row.storeName))
     }
 
     rows.sort((a, b) => {
       if (sortBy === 'score') {
         return b.matchScore - a.matchScore
       }
-      if (sortBy === 'unit') {
-        return (a.pricePerUnit ?? Number.MAX_SAFE_INTEGER) - (b.pricePerUnit ?? Number.MAX_SAFE_INTEGER)
+      if (sortBy === 'presentation') {
+        const left = parsePresentationValue(a.presentation?.label)
+        const right = parsePresentationValue(b.presentation?.label)
+
+        if (!left && !right) {
+          return (a.presentation?.label || '').localeCompare(b.presentation?.label || '', 'es', { sensitivity: 'base' })
+        }
+        if (!left) {
+          return 1
+        }
+        if (!right) {
+          return -1
+        }
+        if (left.priority !== right.priority) {
+          return left.priority - right.priority
+        }
+        if (left.value !== right.value) {
+          return left.value - right.value
+        }
+        return (a.presentation?.label || '').localeCompare(b.presentation?.label || '', 'es', { sensitivity: 'base' })
       }
       return (a.price ?? Number.MAX_SAFE_INTEGER) - (b.price ?? Number.MAX_SAFE_INTEGER)
     })
 
     return rows
-  }, [comparisonRows, selectedStores, maxPrice, sortBy])
+  }, [comparisonRows, nameFilter, selectedStores, sortBy])
 
   const topStores = useMemo(() => {
     const counts = new Map<string, number>()
@@ -315,7 +455,7 @@ function Products() {
       const res = await orchestratorService.compareProduct(productQuery.trim())
       setCompareData(res.data)
       setSelectedStores([])
-      setMaxPrice(null)
+      setNameFilter('')
     } catch (err: unknown) {
       setCompareError(errorMessage(err, 'No se pudo comparar el producto.'))
       setCompareData(null)
@@ -527,6 +667,13 @@ function Products() {
                 ) : (
                   <>
                     <div className="filters-row">
+                      <input
+                        type="search"
+                        value={nameFilter}
+                        onChange={(event) => setNameFilter(event.target.value)}
+                        placeholder="Buscar por nombre del producto"
+                      />
+
                       <div className="store-filter">
                         {availableStores.map((store) => (
                           <label key={store}>
@@ -540,21 +687,10 @@ function Products() {
                         ))}
                       </div>
 
-                      <input
-                        type="number"
-                        min={0}
-                        value={maxPrice ?? ''}
-                        onChange={(event) => {
-                          const raw = event.target.value
-                          setMaxPrice(raw ? Number(raw) : null)
-                        }}
-                        placeholder="Precio máximo"
-                      />
-
-                      <select value={sortBy} onChange={(event) => setSortBy(event.target.value as 'price' | 'score' | 'unit')}>
+                      <select value={sortBy} onChange={(event) => setSortBy(event.target.value as SortMode)}>
+                        <option value="presentation">Ordenar por presentación</option>
                         <option value="price">Ordenar por precio</option>
                         <option value="score">Ordenar por score</option>
-                        <option value="unit">Ordenar por unidad</option>
                       </select>
                     </div>
 
