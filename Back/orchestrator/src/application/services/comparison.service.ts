@@ -1216,6 +1216,9 @@ export class ComparisonService {
     if (normalized.includes('exito')) {
       return 'exito';
     }
+    if (normalized.includes('carulla')) {
+      return 'carulla';
+    }
     if (normalized.includes('olimpica')) {
       return 'olimpica';
     }

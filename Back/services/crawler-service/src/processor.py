@@ -3,10 +3,11 @@ from fastapi import HTTPException
 from src.clients.product_client import ProductClient
 from src.clients.scraped_client import ScrapedClient
 from src.clients.store_client import StoreClient
+from src.scrapers.carulla import scrape_carulla
 from src.scrapers.d1 import scrape_d1
 from src.scrapers.exito import scrape_exito
 from src.scrapers.olimpica import scrape_olimpica
-from src.scrapers.common import is_relevant_for_query
+from src.scrapers.common import is_relevant_for_query, normalize_text
 
 
 def _matches_query(product_name: str, query: str) -> bool:
@@ -28,12 +29,14 @@ async def process_refresh() -> dict:
 
     store_scraper_mapping = {}
     for store in stores_data:
-        store_name_lower = store["name"].lower()
-        if "olimpica" in store_name_lower:
+        store_name_normalized = normalize_text(store["name"])
+        if "olimpica" in store_name_normalized:
             store_scraper_mapping["olimpica"] = store["name"]
-        elif "exito" in store_name_lower:
+        elif "exito" in store_name_normalized:
             store_scraper_mapping["exito"] = store["name"]
-        elif store_name_lower in {"d1", "tiendas d1", "tienda d1"} or "d1" in store_name_lower:
+        elif "carulla" in store_name_normalized:
+            store_scraper_mapping["carulla"] = store["name"]
+        elif store_name_normalized in {"d1", "tiendas d1", "tienda d1"} or "d1" in store_name_normalized:
             store_scraper_mapping["d1"] = store["name"]
 
     scraped_results = {}
@@ -55,6 +58,15 @@ async def process_refresh() -> dict:
             "products": exito_products,
         }
         print(f"✅ Éxito: {len(exito_products)} productos scrapeados")
+
+    if "carulla" in store_scraper_mapping:
+        print("Scrapeando Carulla...")
+        carulla_products = await scrape_carulla(product_queries)
+        scraped_results["carulla"] = {
+            "store_name": store_scraper_mapping["carulla"],
+            "products": carulla_products,
+        }
+        print(f"✅ Carulla: {len(carulla_products)} productos scrapeados")
 
     if "d1" in store_scraper_mapping:
         print("Scrapeando D1...")
