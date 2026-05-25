@@ -284,31 +284,6 @@ function Products() {
     return rows
   }, [comparisonRows, selectedStores, maxPrice, sortBy])
 
-  const compareMetrics = useMemo(() => {
-    if (!compareData || filteredRanking.length === 0) {
-      return null
-    }
-
-    const prices = filteredRanking
-      .map((row) => row.price)
-      .filter((value): value is number => value !== null)
-
-    if (prices.length === 0) {
-      return null
-    }
-
-    const best = Math.min(...prices)
-    const worst = Math.max(...prices)
-    const spread = worst - best
-
-    return {
-      best,
-      worst,
-      spread,
-      candidates: filteredRanking.length,
-    }
-  }, [compareData, filteredRanking])
-
   const topStores = useMemo(() => {
     const counts = new Map<string, number>()
     for (const row of filteredRanking) {
@@ -542,27 +517,6 @@ function Products() {
 
             {compareError && <p className="error-line">{compareError}</p>}
 
-            {compareMetrics && (
-              <div className="compare-metrics">
-                <div>
-                  <span>Mejor precio</span>
-                  <strong>{priceLabel(compareMetrics.best)}</strong>
-                </div>
-                <div>
-                  <span>Mayor precio</span>
-                  <strong>{priceLabel(compareMetrics.worst)}</strong>
-                </div>
-                <div>
-                  <span>Ahorro potencial</span>
-                  <strong>{priceLabel(compareMetrics.spread)}</strong>
-                </div>
-                <div>
-                  <span>Coincidencias</span>
-                  <strong>{compareMetrics.candidates}</strong>
-                </div>
-              </div>
-            )}
-
             {compareData ? (
               <>
                 {comparisonRows.length === 0 ? (
@@ -572,17 +526,6 @@ function Products() {
                   </div>
                 ) : (
                   <>
-                    <div className="best-store-grid">
-                      {compareData.bestByStore.map((row) => (
-                        <article className="best-store-card" key={row.id}>
-                          <span>{row.storeName}</span>
-                          <strong>{priceLabel(row.price)}</strong>
-                          <p>{row.sourceName}</p>
-                          <small>{row.presentation?.label || 'Presentación no disponible'}</small>
-                        </article>
-                      ))}
-                    </div>
-
                     <div className="filters-row">
                       <div className="store-filter">
                         {availableStores.map((store) => (
@@ -652,13 +595,6 @@ function Products() {
                       </div>
 
                       <aside className="insight-rail">
-                        <article>
-                          <h4>Mejor coincidencia global</h4>
-                          <strong>{compareData.bestOverall?.storeName || 'N/A'}</strong>
-                          <p>{compareData.bestOverall?.sourceName || 'Sin dato disponible'}</p>
-                          <p>{priceLabel(compareData.bestOverall?.price ?? null)}</p>
-                        </article>
-
                         <article>
                           <h4>Top tiendas por hallazgos</h4>
                           {topStores.map(([store, amount]) => (

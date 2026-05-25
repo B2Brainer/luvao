@@ -272,75 +272,6 @@ button:disabled {
   text-align: right;
 }
 
-.compare-metrics {
-  margin-top: 0.75rem;
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0.55rem;
-}
-
-.compare-metrics div {
-  background: #f7fafd;
-  border: 1px solid rgba(20, 32, 51, 0.08);
-  border-radius: 8px;
-  padding: 0.6rem;
-}
-
-.compare-metrics span {
-  display: block;
-  font-size: 0.76rem;
-  color: var(--text-soft);
-}
-
-.compare-metrics strong {
-  display: block;
-  margin-top: 0.15rem;
-}
-
-.best-store-grid {
-  margin-top: 0.75rem;
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.55rem;
-}
-
-.best-store-card {
-  min-width: 0;
-  background: #f7fafd;
-  border: 1px solid rgba(20, 32, 51, 0.08);
-  border-radius: 8px;
-  padding: 0.68rem;
-}
-
-.best-store-card span,
-.best-store-card small {
-  display: block;
-  color: var(--text-soft);
-}
-
-.best-store-card span {
-  font-size: 0.76rem;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  font-weight: 800;
-}
-
-.best-store-card strong {
-  display: block;
-  margin-top: 0.18rem;
-  color: var(--text-strong);
-}
-
-.best-store-card p {
-  margin-top: 0.28rem;
-  color: var(--text-strong);
-  font-size: 0.86rem;
-}
-
-.best-store-card small {
-  margin-top: 0.18rem;
-}
-
 .filters-row {
   margin-top: 0.75rem;
   display: grid;
@@ -578,8 +509,6 @@ td a {
 
 @media (max-width: 980px) {
   .kpi-strip,
-  .compare-metrics,
-  .best-store-grid,
   .opt-result-grid,
   .left-rail {
     grid-template-columns: 1fr 1fr;
@@ -612,8 +541,6 @@ td a {
   }
 
   .kpi-strip,
-  .compare-metrics,
-  .best-store-grid,
   .opt-result-grid,
   .left-rail,
   .rail-stats {
