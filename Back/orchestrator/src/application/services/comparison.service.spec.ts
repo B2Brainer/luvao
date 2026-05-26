@@ -84,10 +84,17 @@ describe('ComparisonService', () => {
     jest.clearAllMocks();
     productClient.getDaneFamilyBasket.mockResolvedValue([
       { product: 'arroz', quantity: 1, category: 'Cereales y harinas', unit: 'kg' },
+      { product: 'papa', quantity: 1, category: 'Tubérculos y plátanos', unit: 'kg' },
+      { product: 'frijol', quantity: 1, category: 'Legumbres', unit: 'kg' },
+      { product: 'cebolla cabezona', quantity: 1, category: 'Verduras y hortalizas', unit: 'kg' },
+      { product: 'banano', quantity: 1, category: 'Frutas', unit: 'kg' },
       { product: 'pollo', quantity: 1, category: 'Proteínas', unit: 'kg' },
+      { product: 'huevos', quantity: 1, category: 'Proteínas', unit: 'docena' },
+      { product: 'leche', quantity: 1, category: 'Lácteos', unit: 'l' },
+      { product: 'queso campesino', quantity: 1, category: 'Lácteos', unit: 'kg' },
       { product: 'atun', quantity: 1, category: 'Proteínas', unit: 'und' },
     ]);
-    productClient.getProductNames.mockResolvedValue(['arroz', 'pollo', 'atun']);
+    productClient.getProductNames.mockResolvedValue(['arroz', 'papa', 'frijol', 'cebolla cabezona', 'banano', 'pollo', 'huevos', 'leche', 'queso campesino', 'atun']);
   });
 
   it.each(basketAuditCases)('mantiene coherencia semantica para %s', async ({ query, validName, invalidName }) => {
@@ -135,6 +142,26 @@ describe('ComparisonService', () => {
 
     expect(nutrition.calories).toBe(expectedCalories);
     expect(nutrition.source).toBe('estimated');
+  });
+
+  it.each([
+    { product: 'yogurt natural', expectedCategory: 'Lácteos' },
+    { product: 'queso mozzarella', expectedCategory: 'Lácteos' },
+    { product: 'garbanzo', expectedCategory: 'Legumbres' },
+    { product: 'brocoli', expectedCategory: 'Verduras y hortalizas' },
+    { product: 'sandia', expectedCategory: 'Frutas' },
+    { product: 'batata', expectedCategory: 'Tubérculos y plátanos' },
+    { product: 'huevos rojos', expectedCategory: 'Proteínas' },
+  ])('infiere categoria investigativa para %s', async ({ product, expectedCategory }) => {
+    const lookup = await serviceInternals.getResearchCategoryLookup();
+
+    expect(serviceInternals.inferCategoryForProduct(product, lookup)).toBe(expectedCategory);
+  });
+
+  it('mantiene el fallback cuando el producto no parece alimentario', async () => {
+    const lookup = await serviceInternals.getResearchCategoryLookup();
+
+    expect(serviceInternals.inferCategoryForProduct('detergente liquido', lookup)).toBe('Sin categoría / revisar');
   });
 
   it('recalcula un escenario estadistico para la ultima lista personalizada', async () => {

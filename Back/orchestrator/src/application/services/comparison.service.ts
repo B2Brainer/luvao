@@ -115,6 +115,14 @@ type StoreScenarioSummary = {
   targetCalories: number;
 };
 
+type CategoryInferenceRule = {
+  category: string;
+  exact?: string[];
+  all?: string[];
+  any?: string[];
+  excludeStems?: string[];
+};
+
 const STOPWORDS = new Set([
   'de',
   'del',
@@ -509,6 +517,55 @@ const EXTRA_CATEGORY_BY_PRODUCT: Record<string, string> = {
   pepino: 'Verduras y hortalizas',
   lechuga: 'Verduras y hortalizas',
 };
+
+const CATEGORY_INFERENCE_RULES: CategoryInferenceRule[] = [
+  {
+    category: 'Tubérculos y plátanos',
+    exact: ['batata', 'camote', 'name', 'arracacha'],
+    any: ['papa', 'yuca', 'platano', 'batata', 'camote', 'name', 'arracacha'],
+  },
+  {
+    category: 'Legumbres',
+    exact: ['garbanzo', 'caraota', 'haba'],
+    any: ['frijol', 'lenteja', 'garbanzo', 'arveja', 'caraota', 'haba'],
+  },
+  {
+    category: 'Verduras y hortalizas',
+    exact: ['brocoli', 'coliflor', 'espinaca', 'apio', 'pimenton', 'repollo', 'col', 'acelga', 'calabacin', 'zucchini'],
+    any: ['tomate', 'cebolla', 'zanahoria', 'habichuela', 'ajo', 'cilantro', 'pepino', 'lechuga', 'brocoli', 'coliflor', 'espinaca', 'apio', 'pimenton', 'repollo', 'col', 'acelga', 'calabacin', 'zucchini'],
+    excludeStems: ['jabon', 'shampoo', 'gel', 'mascarilla', 'exfoliante', 'salsa'],
+  },
+  {
+    category: 'Frutas',
+    exact: ['sandia', 'melon', 'kiwi', 'durazno', 'ciruela'],
+    any: ['banano', 'naranja', 'limon', 'guayaba', 'mora', 'maracuya', 'manzana', 'pera', 'papaya', 'mango', 'pina', 'fresa', 'uva', 'mandarina', 'sandia', 'melon', 'kiwi', 'durazno', 'ciruela'],
+    excludeStems: ['jabon', 'shampoo', 'gel', 'compota', 'mermelada', 'jugo', 'bebida'],
+  },
+  {
+    category: 'Proteínas',
+    any: ['pollo', 'pescado', 'atun', 'huevo', 'res', 'cerdo', 'tilapia', 'trucha', 'mojarra', 'sardina', 'salmon', 'pechuga', 'filete'],
+    excludeStems: ['perro', 'gato', 'mascota', 'concentrado', 'alimento para', 'caldo', 'sabor'],
+  },
+  {
+    category: 'Lácteos',
+    any: ['leche', 'queso', 'yogur', 'yogurt', 'kumis', 'kefir', 'cuajada'],
+    excludeStems: ['jab', 'shampoo', 'mascarilla'],
+  },
+  {
+    category: 'Grasas y complementos',
+    any: ['aceite', 'margarina', 'mantequilla', 'mayonesa'],
+    excludeStems: ['motor', 'automotr', 'lubric', 'masaje', 'esencial'],
+  },
+  {
+    category: 'Endulzantes y básicos',
+    any: ['azucar', 'panela', 'sal', 'miel'],
+    excludeStems: ['sin azucar', 'sal de frutas'],
+  },
+  {
+    category: 'Bebidas y otros',
+    any: ['cafe', 'te', 'aromatica', 'infusion'],
+  },
+];
 
 const CALORIE_REFERENCES: Record<string, CalorieReference> = {
   arroz: { caloriesPerKg: 1100 },
@@ -971,6 +1028,11 @@ export class ComparisonService {
     }
 
     const candidateTokens = this.toCanonicalTokens(product);
+    const categoryFromRules = this.inferCategoryFromRules(normalized, candidateTokens);
+    if (categoryFromRules) {
+      return categoryFromRules;
+    }
+
     const pseudoCandidate = {
       canonicalTokens: candidateTokens,
       normalizedName: normalized,
@@ -993,6 +1055,48 @@ export class ComparisonService {
     }
 
     return bestMatch?.category ?? UNCATEGORIZED_LABEL;
+  }
+
+  private inferCategoryFromRules(normalized: string, candidateTokens: string[]): string | null {
+    const tokenSet = new Set(candidateTokens);
+
+    for (const rule of CATEGORY_INFERENCE_RULES) {
+      if (rule.excludeStems?.some((stem) => normalized.includes(stem))) {
+        continue;
+      }
+
+      if (rule.exact?.includes(normalized)) {
+        return rule.category;
+      }
+
+      if (rule.all?.every((token) => this.matchesCategoryCue(normalized, tokenSet, token))) {
+        return rule.category;
+      }
+
+      if (rule.any?.some((token) => this.matchesCategoryCue(normalized, tokenSet, token))) {
+        return rule.category;
+      }
+    }
+
+    if (
+      tokenSet.has('carne') &&
+      !['perro', 'gato', 'mascota'].some((token) => tokenSet.has(token) || normalized.includes(token))
+    ) {
+      return 'Proteínas';
+    }
+
+    return null;
+  }
+
+  private matchesCategoryCue(normalized: string, tokenSet: Set<string>, cue: string): boolean {
+    if (tokenSet.has(cue)) {
+      return true;
+    }
+
+    return normalized === cue ||
+      normalized.startsWith(`${cue} `) ||
+      normalized.endsWith(` ${cue}`) ||
+      normalized.includes(` ${cue} `);
   }
 
   private getCandidateRanking(product: string, canonicalAll: CanonicalProduct[]): RankedProduct[] {
