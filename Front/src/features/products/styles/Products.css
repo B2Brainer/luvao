@@ -37,7 +37,8 @@
 .hero-search input,
 .filters-row input,
 .filters-row select,
-.opt-actions input {
+.opt-actions input,
+.opt-actions select {
   border: 1px solid rgba(20, 32, 51, 0.12);
   background: #f8fafc;
   border-radius: 10px;
@@ -397,8 +398,31 @@ td a {
 .opt-actions {
   margin-top: 0.75rem;
   display: grid;
-  grid-template-columns: 1fr auto auto;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 260px) auto auto;
   gap: 0.55rem;
+  align-items: end;
+}
+
+.opt-store-field {
+  display: grid;
+  gap: 0.32rem;
+}
+
+.opt-store-field span {
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #5e6e83;
+}
+
+.opt-store-field select {
+  width: 100%;
+}
+
+.opt-hint {
+  margin-top: 0.65rem;
+  color: var(--text-soft);
+  font-size: 0.84rem;
 }
 
 .chips-row {

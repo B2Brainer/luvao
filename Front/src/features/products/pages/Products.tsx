@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { orchestratorService } from '../../../services/api'
-import { saveOptimizationContext } from '../../../services/optimizationContext'
+import { saveOptimizationContext, useOptimizationContext } from '../../../services/optimizationContext'
 import '../styles/Products.css'
 
 type Stats = {
@@ -74,16 +74,37 @@ type OptimizeLine = {
 
 type OptimizeResponse = {
   mode?: 'manual' | 'calorie-plan'
+  computedAt?: string
+  restrictedStore?: string | null
   periodDays?: number
   targetCalories?: number
   plannedCalories?: number
+  categoryTargets?: Array<{
+    category: string
+    share: number
+    targetCalories: number
+    plannedCalories: number
+  }>
   requestedItems: number
   resolvedItems: number
   unresolvedItems: string[]
   totalEstimated: number
   estimatedByStore: Record<string, number>
+  storeScenarios?: Array<{
+    storeName: string
+    totalEstimated: number
+    resolvedItems: number
+    requestedItems: number
+    unresolvedItems: string[]
+    coverage: number
+    plannedCalories: number
+    targetCalories: number
+  }>
   lines: OptimizeLine[]
 }
+
+const OPTIMIZATION_PERIOD_DAYS = 30
+const OPTIMIZATION_TARGET_CALORIES = 66000
 
 const currency = new Intl.NumberFormat('es-CO', {
   style: 'currency',
@@ -283,6 +304,7 @@ function progressForStatus(status?: ScrapingJob['status']) {
 }
 
 function Products() {
+  const optimizationContext = useOptimizationContext()
   const [productQuery, setProductQuery] = useState('')
   const latestProductQuery = useRef(productQuery)
   const [researchBasket, setResearchBasket] = useState<BasketItem[]>([])
@@ -297,7 +319,10 @@ function Products() {
   const [sortBy, setSortBy] = useState<SortMode>('price')
 
   const [itemsInput, setItemsInput] = useState('')
-  const [items, setItems] = useState<Array<{ product: string; quantity: number }>>([])
+  const [items, setItems] = useState<Array<{ product: string; quantity: number }>>(
+    optimizationContext.source === 'custom-list' ? optimizationContext.items : [],
+  )
+  const [restrictedStore, setRestrictedStore] = useState(optimizationContext.restrictedStore ?? '')
   const [optimizeLoading, setOptimizeLoading] = useState(false)
   const [optimizeError, setOptimizeError] = useState('')
   const [optimizeData, setOptimizeData] = useState<OptimizeResponse | null>(null)
@@ -396,6 +421,23 @@ function Products() {
       return left.localeCompare(right, 'es', { sensitivity: 'base' })
     })
   }, [comparisonRows])
+
+  const optimizationStores = useMemo(() => {
+    const stores = new Set((priceStats?.byStore ?? []).map((item) => item.storeName))
+
+    return Array.from(stores).sort((left, right) => {
+      const leftIndex = preferredStoreOrder.indexOf(left.toLowerCase())
+      const rightIndex = preferredStoreOrder.indexOf(right.toLowerCase())
+      const leftRank = leftIndex === -1 ? Number.MAX_SAFE_INTEGER : leftIndex
+      const rightRank = rightIndex === -1 ? Number.MAX_SAFE_INTEGER : rightIndex
+
+      if (leftRank !== rightRank) {
+        return leftRank - rightRank
+      }
+
+      return left.localeCompare(right, 'es', { sensitivity: 'base' })
+    })
+  }, [priceStats])
 
   const filteredRanking = useMemo(() => {
     let rows = [...comparisonRows]
@@ -528,9 +570,19 @@ function Products() {
     setOptimizeLoading(true)
     setOptimizeError('')
     try {
-      const res = await orchestratorService.optimizeList(items)
+      const res = await orchestratorService.optimizeList({
+        items,
+        periodDays: OPTIMIZATION_PERIOD_DAYS,
+        targetCalories: OPTIMIZATION_TARGET_CALORIES,
+        restrictedStore: restrictedStore || undefined,
+      })
       setOptimizeData(res.data)
-      saveOptimizationContext({ source: 'custom-list', items })
+      saveOptimizationContext({
+        source: 'custom-list',
+        items,
+        restrictedStore: (res.data.restrictedStore ?? restrictedStore) || null,
+        lastOptimization: res.data,
+      })
     } catch (err: unknown) {
       setOptimizeError(errorMessage(err, 'No se pudo optimizar la lista.'))
       setOptimizeData(null)
@@ -543,9 +595,18 @@ function Products() {
     setOptimizeLoading(true)
     setOptimizeError('')
     try {
-      const res = await orchestratorService.optimizeList([])
+      const res = await orchestratorService.optimizeList({
+        items: [],
+        periodDays: OPTIMIZATION_PERIOD_DAYS,
+        targetCalories: OPTIMIZATION_TARGET_CALORIES,
+        restrictedStore: restrictedStore || undefined,
+      })
       setOptimizeData(res.data)
-      saveOptimizationContext({ source: 'dane-basket' })
+      saveOptimizationContext({
+        source: 'dane-basket',
+        restrictedStore: (res.data.restrictedStore ?? restrictedStore) || null,
+        lastOptimization: res.data,
+      })
     } catch (err: unknown) {
       setOptimizeError(errorMessage(err, 'No se pudo optimizar la canasta básica alimentaria.'))
       setOptimizeData(null)
@@ -663,7 +724,7 @@ function Products() {
           <div className="rail-card">
             <h3>Acciones rápidas</h3>
             <button type="button" onClick={optimizeDaneBasket} disabled={optimizeLoading}>
-              {optimizeLoading ? 'Optimizando...' : 'Optimizar canasta básica'}
+              {optimizeLoading ? 'Optimizando...' : restrictedStore ? `Optimizar canasta en ${restrictedStore}` : 'Optimizar canasta básica'}
             </button>
           </div>
         </aside>
@@ -795,11 +856,28 @@ function Products() {
                 onChange={(event) => setItemsInput(event.target.value)}
                 placeholder="Agregar producto"
               />
+              <label className="opt-store-field">
+                <span>Comprar solo en</span>
+                <select
+                  aria-label="Comprar solo en"
+                  value={restrictedStore}
+                  onChange={(event) => setRestrictedStore(event.target.value)}
+                >
+                  <option value="">Todas las tiendas</option>
+                  {optimizationStores.map((store) => (
+                    <option key={store} value={store}>{store}</option>
+                  ))}
+                </select>
+              </label>
               <button type="submit">Agregar</button>
               <button type="button" className="secondary" onClick={runOptimize} disabled={items.length === 0 || optimizeLoading}>
                 {optimizeLoading ? 'Optimizando...' : 'Optimizar lista'}
               </button>
             </form>
+
+            <p className="opt-hint">
+              La optimización principal usa una meta base de {calorieLabel(OPTIMIZATION_TARGET_CALORIES)} para {OPTIMIZATION_PERIOD_DAYS} días y puede limitarse a una sola tienda.
+            </p>
 
             <div className="chips-row">
               {items.map((item) => (
@@ -844,6 +922,16 @@ function Products() {
                     </small>
                   </article>
                 )}
+
+                <article className="summary-card">
+                  <span>Restricción de tienda</span>
+                  <strong>{optimizeData.restrictedStore || 'Todas las tiendas'}</strong>
+                  <small>
+                    {optimizeData.restrictedStore
+                      ? 'La selección principal se calculó solo con esta tienda.'
+                      : 'La selección principal puede combinar tiendas; la comparativa conserva el resto del mercado.'}
+                  </small>
+                </article>
 
                 <article className="summary-card full">
                   <span>Detalle por ítem</span>

@@ -36,4 +36,10 @@ export class OptimizeListDto {
   @Min(1)
   @Type(() => Number)
   targetCalories?: number;
+
+  @ApiPropertyOptional({ example: 'Olimpica', description: 'Si se envía, restringe la selección principal del optimizador a una sola tienda.' })
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  restrictedStore?: string;
 }

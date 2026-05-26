@@ -108,6 +108,24 @@ const daneScenario: OptimizeResponse = {
   lines: [],
 }
 
+const persistedScenario: OptimizeResponse = {
+  ...customScenario,
+  computedAt: '2026-05-26T10:05:00.000Z',
+  restrictedStore: 'Olimpica',
+  storeScenarios: [
+    {
+      storeName: 'Exito',
+      totalEstimated: 53000,
+      resolvedItems: 2,
+      requestedItems: 2,
+      unresolvedItems: [],
+      coverage: 1,
+      plannedCalories: 50000,
+      targetCalories: 66000,
+    },
+  ],
+}
+
 const useOptimizationContextMock = vi.mocked(useOptimizationContext)
 const useResearchScenarioMock = vi.mocked(useResearchScenario)
 const useProjectionScenariosMock = vi.mocked(useProjectionScenarios)
@@ -126,6 +144,8 @@ describe('Statistics page', () => {
         { product: 'arroz', quantity: 1 },
         { product: 'pollo', quantity: 1 },
       ],
+      restrictedStore: null,
+      lastOptimization: null,
       updatedAt: '2026-05-26T10:00:00.000Z',
     })
 
@@ -200,5 +220,25 @@ describe('Statistics page', () => {
       expect(screen.getByText('Olimpica')).not.toBeNull()
       expect(screen.getByText('Lista corta: con menos de 3 ítems los indicadores pueden sobrerrepresentar un solo producto.')).not.toBeNull()
     })
+  })
+
+  it('prioriza el último resultado guardado del optimizador para la gráfica por tienda', () => {
+    useOptimizationContextMock.mockReturnValue({
+      source: 'custom-list',
+      items: [
+        { product: 'arroz', quantity: 1 },
+        { product: 'pollo', quantity: 1 },
+      ],
+      restrictedStore: 'Olimpica',
+      lastOptimization: persistedScenario,
+      updatedAt: '2026-05-26T10:06:00.000Z',
+    })
+
+    render(<Statistics />)
+
+    expect(screen.getByText('Exito')).not.toBeNull()
+    expect(screen.queryByText('Olimpica')).toBeNull()
+    expect(screen.getByText('Usa la última optimización guardada en la home para que este bloque refleje exactamente ese cálculo.')).not.toBeNull()
+    expect(screen.getByText('La última optimización principal quedó restringida a Olimpica.')).not.toBeNull()
   })
 })

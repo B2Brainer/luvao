@@ -198,6 +198,85 @@ describe('ComparisonService', () => {
     ])
   })
 
+  it('restringe la seleccion principal a una sola tienda sin perder la comparativa general', async () => {
+    scrapedClient.searchByFilters.mockResolvedValue([
+      makeCandidate('arroz-exito', 'arroz', 'Arroz Diana 500 g', 2500, 'Exito'),
+      makeCandidate('arroz-olimpica', 'arroz', 'Arroz Diana 500 g', 2800, 'Olimpica'),
+      makeCandidate('pollo-exito', 'pollo', 'Pechuga de pollo 500 g', 9000, 'Exito'),
+      makeCandidate('pollo-olimpica', 'pollo', 'Pechuga de pollo 500 g', 9500, 'Olimpica'),
+    ])
+
+    const result = await service.optimizeShoppingList(
+      [
+        { product: 'arroz', quantity: 2 },
+        { product: 'pollo', quantity: 1 },
+      ],
+      { periodDays: 30, targetCalories: 3000, restrictedStore: 'Olimpica' },
+    )
+
+    expect(result.restrictedStore).toBe('Olimpica')
+    expect(result.estimatedByStore).toEqual({ Olimpica: 15100 })
+    expect(result.lines).toEqual(expect.arrayContaining([
+      expect.objectContaining({ requested: 'arroz', selected: expect.objectContaining({ storeName: 'Olimpica' }) }),
+      expect.objectContaining({ requested: 'pollo', selected: expect.objectContaining({ storeName: 'Olimpica' }) }),
+    ]))
+    expect(result.storeScenarios).toEqual(expect.arrayContaining([
+      expect.objectContaining({ storeName: 'Exito', totalEstimated: 14000 }),
+      expect.objectContaining({ storeName: 'Olimpica', totalEstimated: 15100 }),
+    ]))
+  })
+
+  it('restringe tambien la canasta DANE a una sola tienda', async () => {
+    productClient.getDaneFamilyBasket.mockResolvedValue([
+      { product: 'arroz', quantity: 1, category: 'Cereales y harinas', unit: 'kg' },
+      { product: 'pollo', quantity: 1, category: 'Proteínas', unit: 'kg' },
+    ])
+    scrapedClient.searchByFilters.mockResolvedValue([
+      makeCandidate('arroz-exito', 'arroz', 'Arroz Diana 500 g', 2500, 'Exito'),
+      makeCandidate('arroz-olimpica', 'arroz', 'Arroz Diana 500 g', 2800, 'Olimpica'),
+      makeCandidate('pollo-exito', 'pollo', 'Pechuga de pollo 500 g', 9000, 'Exito'),
+      makeCandidate('pollo-olimpica', 'pollo', 'Pechuga de pollo 500 g', 9500, 'Olimpica'),
+    ])
+
+    const result = await service.optimizeShoppingList(undefined, {
+      periodDays: 30,
+      targetCalories: 3000,
+      restrictedStore: 'Exito',
+    })
+
+    expect(result.restrictedStore).toBe('Exito')
+    expect(result.estimatedByStore).toEqual({ Exito: 14000 })
+    expect(result.lines.every((line) => line.selected?.storeName === 'Exito')).toBe(true)
+    expect(result.storeScenarios).toEqual(expect.arrayContaining([
+      expect.objectContaining({ storeName: 'Exito', totalEstimated: 14000 }),
+      expect.objectContaining({ storeName: 'Olimpica', totalEstimated: 15100 }),
+    ]))
+  })
+
+  it('aplica un piso minimo de seleccion calórica en custom-list sin cambiar el target mostrado', async () => {
+    scrapedClient.searchByFilters.mockResolvedValue([
+      makeCandidate('leche-exito', 'leche', 'Leche entera 200 ml', 1200, 'Exito'),
+      makeCandidate('queso-exito', 'queso campesino', 'Queso campesino fresco 500 g', 7000, 'Exito'),
+    ])
+
+    const result = await service.optimizeShoppingList(
+      [
+        { product: 'leche', quantity: 1 },
+        { product: 'queso campesino', quantity: 10 },
+      ],
+      { periodDays: 30, targetCalories: 3000 },
+    )
+
+    expect(result.lines).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        requested: 'leche',
+        targetCalories: 16,
+        quantity: 2,
+        plannedCalories: 244,
+      }),
+    ]))
+  })
+
   it('expone cobertura parcial al simular la misma lista en una sola tienda', async () => {
     scrapedClient.searchByFilters.mockResolvedValue([
       makeCandidate('arroz-exito', 'arroz', 'Arroz Diana 500 g', 2500, 'Exito'),

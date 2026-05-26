@@ -35,12 +35,13 @@ export function useResearchScenario(filters: ResearchViewFilters, context: Optim
   const items = optimizationItems(context)
 
   return useQuery({
-    queryKey: ['research', 'scenario', context.source, items, filters.householdSize, periodDays, filters.dailyCaloriesPerPerson],
+    queryKey: ['research', 'scenario', context.source, context.restrictedStore || 'all', items, filters.householdSize, periodDays, filters.dailyCaloriesPerPerson],
     queryFn: async () => {
       const response = await orchestratorService.optimizeList({
         items,
         periodDays,
         targetCalories,
+        restrictedStore: context.restrictedStore || undefined,
       })
 
       return response.data as OptimizeResponse
@@ -56,12 +57,13 @@ export function useProjectionScenarios(filters: ResearchViewFilters, context: Op
   const items = optimizationItems(context)
   const results = useQueries({
     queries: requests.map((request) => ({
-      queryKey: ['research', 'projection', context.source, items, request.key, request.periodDays, request.targetCalories],
+      queryKey: ['research', 'projection', context.source, context.restrictedStore || 'all', items, request.key, request.periodDays, request.targetCalories],
       queryFn: async () => {
         const response = await orchestratorService.optimizeList({
           items,
           periodDays: request.periodDays,
           targetCalories: request.targetCalories,
+          restrictedStore: context.restrictedStore || undefined,
         })
 
         return response.data as OptimizeResponse

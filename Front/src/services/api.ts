@@ -18,6 +18,7 @@ type OptimizeListPayload = {
   items?: OptimizeListItem[]
   periodDays?: number
   targetCalories?: number
+  restrictedStore?: string
 }
 
 // -------- AUTH SERVICE --------

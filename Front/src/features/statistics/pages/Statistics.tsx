@@ -47,22 +47,68 @@ function tooltipNumber(value: number | string | ReadonlyArray<number | string> |
   return Number(value ?? 0)
 }
 
+function hasStoreComparison(response: { storeScenarios?: Array<unknown>; estimatedByStore: Record<string, number> } | null | undefined) {
+  if (!response) {
+    return false
+  }
+
+  return Boolean(response.storeScenarios?.length || Object.keys(response.estimatedByStore ?? {}).length)
+}
+
+function formatSnapshotTime(value: string | null | undefined) {
+  if (!value) {
+    return null
+  }
+
+  const parsed = new Date(value)
+
+  if (Number.isNaN(parsed.getTime())) {
+    return null
+  }
+
+  return parsed.toLocaleString('es-CO', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  })
+}
+
 export default function Statistics() {
   const [filters, setFilters] = useState<ResearchViewFilters>(defaultFilters)
   const [sourceOverride, setSourceOverride] = useState<OptimizationContextSource | null>(null)
   const optimizationContext = useOptimizationContext()
   const hasCustomContext = optimizationContext.source === 'custom-list' && optimizationContext.items.length > 0
-  const effectiveContext = sourceOverride === 'dane-basket' || !hasCustomContext
-    ? { source: 'dane-basket' as const, items: [], updatedAt: optimizationContext.updatedAt }
-    : optimizationContext
+  const hasDaneOptimization = optimizationContext.source === 'dane-basket'
+  const defaultDaneContext = {
+    source: 'dane-basket' as const,
+    items: [],
+    restrictedStore: null,
+    lastOptimization: null,
+    updatedAt: optimizationContext.updatedAt,
+  }
+  const effectiveContext = sourceOverride === 'custom-list'
+    ? hasCustomContext
+      ? optimizationContext
+      : defaultDaneContext
+    : sourceOverride === 'dane-basket'
+      ? hasDaneOptimization
+        ? optimizationContext
+        : defaultDaneContext
+      : hasCustomContext || hasDaneOptimization
+        ? optimizationContext
+        : defaultDaneContext
 
   const scenarioQuery = useResearchScenario(filters, effectiveContext)
   const projectionQuery = useProjectionScenarios(filters, effectiveContext)
 
   const scenario = scenarioQuery.data ?? null
+  const persistedStoreScenario = hasStoreComparison(effectiveContext.lastOptimization)
+    ? effectiveContext.lastOptimization
+    : null
+  const storeScenarioSource = persistedStoreScenario ?? scenario
+  const snapshotTimeLabel = formatSnapshotTime(persistedStoreScenario?.computedAt ?? effectiveContext.updatedAt)
 
   const categoryRows = buildCategoryTargetRows(scenario)
-  const storeSpendRows = buildStoreSpendRows(scenario)
+  const storeSpendRows = buildStoreSpendRows(storeScenarioSource)
   const projectionRows = projectionQuery.data
     .filter((item) => item.scenario)
     .map((item) => ({
@@ -230,9 +276,13 @@ export default function Statistics() {
               <div className="statistics-card-head">
                 <div>
                   <h3>Costo si compras todo en una sola tienda</h3>
-                  <p>Recalcula la misma canasta activa limitando la seleccion a un solo retail y mostrando cobertura real.</p>
+                  <p>
+                    {persistedStoreScenario
+                      ? 'Usa la última optimización guardada en la home para que este bloque refleje exactamente ese cálculo.'
+                      : 'Recalcula la misma canasta activa limitando la seleccion a un solo retail y mostrando cobertura real.'}
+                  </p>
                 </div>
-                <span className="chart-caption">{storeSpendRows.length} tiendas</span>
+                <span className="chart-caption">{persistedStoreScenario ? 'Resultado del optimizador' : `${storeSpendRows.length} tiendas`}</span>
               </div>
 
               {!storeSpendRows.length ? (
@@ -251,6 +301,21 @@ export default function Statistics() {
                       <Bar dataKey="value" fill="#2563eb" radius={[0, 8, 8, 0]} name="Costo estimado" />
                     </BarChart>
                   </ResponsiveContainer>
+
+                  {persistedStoreScenario && (
+                    <div className="summary-inline">
+                      <span>
+                        {persistedStoreScenario.restrictedStore
+                          ? `La última optimización principal quedó restringida a ${persistedStoreScenario.restrictedStore}.`
+                          : 'La última optimización principal pudo combinar tiendas y esta vista conserva esa misma corrida.'}
+                      </span>
+                      <span>
+                        {snapshotTimeLabel
+                          ? `Último cálculo guardado: ${snapshotTimeLabel}.`
+                          : 'Para recalcular este bloque desde home, vuelve a ejecutar el optimizador principal.'}
+                      </span>
+                    </div>
+                  )}
 
                   <ul className="store-scenario-list">
                     {storeSpendRows.map((row) => (

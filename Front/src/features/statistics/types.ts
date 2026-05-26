@@ -64,6 +64,8 @@ export type OptimizeLine = {
 
 export type OptimizeResponse = {
   mode?: 'manual' | 'calorie-plan'
+  computedAt?: string
+  restrictedStore?: string | null
   periodDays?: number
   targetCalories?: number
   targetRangeCalories?: { min: number; max: number }

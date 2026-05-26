@@ -149,6 +149,7 @@ export class OrchestratorController {
     return this.comparisonService.optimizeShoppingList(dto.items, {
       periodDays: dto.periodDays,
       targetCalories: dto.targetCalories,
+      restrictedStore: dto.restrictedStore,
     });
   }
 }

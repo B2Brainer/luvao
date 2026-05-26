@@ -57,6 +57,7 @@ type ResearchBasketItem = {
 type OptimizeOptions = {
   periodDays?: number;
   targetCalories?: number;
+  restrictedStore?: string;
 };
 
 type BaseUnit = 'kg' | 'l' | 'und';
@@ -486,6 +487,7 @@ const PRODUCT_RULES: Record<string, ProductRule> = {
 
 const DEFAULT_PERIOD_DAYS = 30;
 const DEFAULT_DAILY_CALORIES = 2200;
+const MIN_CUSTOM_SELECTION_TARGET_CALORIES = 200;
 
 const CATEGORY_CALORIE_SHARE: Record<string, number> = {
   'Cereales y harinas': 0.28,
@@ -663,7 +665,7 @@ export class ComparisonService {
       const quantity = item.quantity && item.quantity > 0 ? item.quantity : 1;
       const targetTokens = this.toCanonicalTokens(item.product);
       const candidates = this.getCandidateRanking(item.product, canonicalAll);
-      const bestByStore = this.pickBestByStore(candidates);
+      const bestByStore = this.pickBestByStore(this.filterCandidatesByRestrictedStore(candidates, options.restrictedStore));
       const bestValue = bestByStore[0] ?? null;
 
       return {
@@ -698,6 +700,8 @@ export class ComparisonService {
 
     return {
       mode: 'manual',
+      computedAt: new Date().toISOString(),
+      restrictedStore: options.restrictedStore ?? null,
       requestedItems: requestedItems.length,
       resolvedItems: selectedLines.length,
       unresolvedItems: unresolved,
@@ -726,11 +730,22 @@ export class ComparisonService {
       this.inferCategoryForProduct(item.product, categoryLookup),
       canonicalAll,
     ));
-    const scenario = this.resolveCalorieScenario(drafts, targetCalories, { distributeByRequestedWeight: true });
-    const storeScenarios = this.buildStoreScenarioSummaries(drafts, targetCalories, { distributeByRequestedWeight: true });
+    const primaryDrafts = options.restrictedStore
+      ? drafts.map((line) => this.cloneDraftLine(line, options.restrictedStore))
+      : drafts;
+    const scenario = this.resolveCalorieScenario(primaryDrafts, targetCalories, {
+      distributeByRequestedWeight: true,
+      minimumSelectionTargetCaloriesPerProduct: MIN_CUSTOM_SELECTION_TARGET_CALORIES,
+    });
+    const storeScenarios = this.buildStoreScenarioSummaries(drafts, targetCalories, {
+      distributeByRequestedWeight: true,
+      minimumSelectionTargetCaloriesPerProduct: MIN_CUSTOM_SELECTION_TARGET_CALORIES,
+    });
 
     return {
       mode: 'calorie-plan',
+      computedAt: new Date().toISOString(),
+      restrictedStore: options.restrictedStore ?? null,
       periodDays,
       targetCalories,
       targetRangeCalories: {
@@ -745,7 +760,7 @@ export class ComparisonService {
       totalEstimated: scenario.totalEstimated,
       estimatedByStore: scenario.estimatedByStore,
       storeScenarios,
-      lines: drafts.map((line) => this.serializeOptimizeLine(line)),
+      lines: primaryDrafts.map((line) => this.serializeOptimizeLine(line)),
     };
   }
 
@@ -770,11 +785,16 @@ export class ComparisonService {
       item.category ?? UNCATEGORIZED_LABEL,
       canonicalAll,
     ));
-    const scenario = this.resolveCalorieScenario(drafts, targetCalories, { distributeByRequestedWeight: false });
+    const primaryDrafts = options.restrictedStore
+      ? drafts.map((line) => this.cloneDraftLine(line, options.restrictedStore))
+      : drafts;
+    const scenario = this.resolveCalorieScenario(primaryDrafts, targetCalories, { distributeByRequestedWeight: false });
     const storeScenarios = this.buildStoreScenarioSummaries(drafts, targetCalories, { distributeByRequestedWeight: false });
 
     return {
       mode: 'calorie-plan',
+      computedAt: new Date().toISOString(),
+      restrictedStore: options.restrictedStore ?? null,
       periodDays,
       targetCalories,
       targetRangeCalories: {
@@ -789,8 +809,16 @@ export class ComparisonService {
       totalEstimated: scenario.totalEstimated,
       estimatedByStore: scenario.estimatedByStore,
       storeScenarios,
-      lines: drafts.map((line) => this.serializeOptimizeLine(line)),
+      lines: primaryDrafts.map((line) => this.serializeOptimizeLine(line)),
     };
+  }
+
+  private filterCandidatesByRestrictedStore(candidates: RankedProduct[], restrictedStore?: string) {
+    if (!restrictedStore) {
+      return candidates;
+    }
+
+    return candidates.filter((candidate) => this.storeKey(candidate.storeName) === this.storeKey(restrictedStore));
   }
 
   private buildDraftLine(
@@ -847,7 +875,7 @@ export class ComparisonService {
   private resolveCalorieScenario(
     drafts: OptimizeDraftLine[],
     targetCalories: number,
-    options: { distributeByRequestedWeight: boolean },
+    options: { distributeByRequestedWeight: boolean; minimumSelectionTargetCaloriesPerProduct?: number },
   ): CalorieScenarioResolution {
     const categoryGroups = new Map<string, OptimizeDraftLine[]>();
     for (const draft of drafts) {
@@ -869,8 +897,11 @@ export class ComparisonService {
         const targetPerProduct = categoryTarget !== null && caloricLines.includes(line) && totalWeight > 0
           ? (categoryTarget * lineWeight) / totalWeight
           : null;
-        const caloriePlan = targetPerProduct !== null
-          ? this.pickCaloriePlanForTarget(line.candidates, targetPerProduct)
+        const selectionTargetPerProduct = targetPerProduct !== null
+          ? Math.max(targetPerProduct, options.minimumSelectionTargetCaloriesPerProduct ?? 0)
+          : null;
+        const caloriePlan = selectionTargetPerProduct !== null
+          ? this.pickCaloriePlanForTarget(line.candidates, selectionTargetPerProduct)
           : null;
         const selected = caloriePlan?.selected ??
           this.pickBestCalorieValue(line.candidates) ??
@@ -947,7 +978,7 @@ export class ComparisonService {
   private buildStoreScenarioSummaries(
     drafts: OptimizeDraftLine[],
     targetCalories: number,
-    options: { distributeByRequestedWeight: boolean },
+    options: { distributeByRequestedWeight: boolean; minimumSelectionTargetCaloriesPerProduct?: number },
   ): StoreScenarioSummary[] {
     return this.collectAvailableStores(drafts)
       .map((storeName) => {
