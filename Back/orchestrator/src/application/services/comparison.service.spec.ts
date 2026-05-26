@@ -126,4 +126,34 @@ describe('ComparisonService', () => {
     expect(nutrition.calories).toBe(expectedCalories);
     expect(nutrition.source).toBe('estimated');
   });
+
+  it('recalcula un escenario estadistico para la ultima lista personalizada', async () => {
+    scrapedClient.searchByFilters.mockResolvedValue([
+      makeCandidate('arroz', 'arroz', 'Arroz Diana 500 g', 2500),
+      makeCandidate('pollo', 'pollo', 'Pechuga de pollo 500 g', 9000),
+    ])
+
+    const result = await service.optimizeShoppingList(
+      [
+        { product: 'arroz', quantity: 2 },
+        { product: 'pollo', quantity: 1 },
+      ],
+      { periodDays: 30, targetCalories: 3000 },
+    )
+
+    expect(result.mode).toBe('calorie-plan')
+    expect(result.targetCalories).toBe(3000)
+    expect(result.categoryTargets).toEqual([
+      expect.objectContaining({
+        category: 'Lista personalizada',
+        targetCalories: 3000,
+      }),
+    ])
+    expect(result.lines).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ requested: 'arroz', category: 'Lista personalizada', targetCalories: 2000 }),
+        expect.objectContaining({ requested: 'pollo', category: 'Lista personalizada', targetCalories: 1000 }),
+      ]),
+    )
+  })
 });

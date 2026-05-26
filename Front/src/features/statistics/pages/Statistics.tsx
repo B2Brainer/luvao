@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useOptimizationContext } from '../../../services/optimizationContext'
 import {
   Area,
   AreaChart,
@@ -58,18 +59,22 @@ function tooltipNumber(value: number | string | ReadonlyArray<number | string> |
 
 export default function Statistics() {
   const [filters, setFilters] = useState<ResearchViewFilters>(defaultFilters)
+  const optimizationContext = useOptimizationContext()
 
   const basketQuery = useResearchBasket()
   const basketItems = basketQuery.data ?? []
-  const productOptions = [...new Set(basketItems.map((item) => item.product))].sort((a, b) => a.localeCompare(b))
+  const activeSourceItems = optimizationContext.source === 'custom-list'
+    ? optimizationContext.items.map((item) => item.product)
+    : basketItems.map((item) => item.product)
+  const productOptions = [...new Set(activeSourceItems)].sort((a, b) => a.localeCompare(b))
   const activePriceQuery = filters.priceQuery || productOptions[0] || ''
   const queryFilters = {
     ...filters,
     priceQuery: activePriceQuery,
   }
 
-  const scenarioQuery = useResearchScenario(filters)
-  const projectionQuery = useProjectionScenarios(filters)
+  const scenarioQuery = useResearchScenario(filters, optimizationContext)
+  const projectionQuery = useProjectionScenarios(filters, optimizationContext)
   const priceStatsQuery = usePriceStats(queryFilters)
 
   const scenario = scenarioQuery.data ?? null
@@ -101,6 +106,12 @@ export default function Statistics() {
     }))
 
   const isRefreshing = scenarioQuery.isFetching || projectionQuery.isFetching || priceStatsQuery.isFetching
+  const activeSourceLabel = optimizationContext.source === 'custom-list'
+    ? `Lista personalizada activa (${optimizationContext.items.length} ítems)`
+    : 'Canasta DANE como base'
+  const activeSourceDescription = optimizationContext.source === 'custom-list'
+    ? 'Esta vista toma como base la última lista personalizada optimizada y la reutiliza para recalcular costo, cobertura y sensibilidad.'
+    : 'Esta vista toma como base la canasta DANE y recalcula costo, cobertura y sensibilidad con el optimizador investigativo.'
 
   return (
     <div className="statistics-shell">
@@ -109,12 +120,11 @@ export default function Statistics() {
           <span className="statistics-eyebrow">Investigacion</span>
           <h1>Analiza gasto, cobertura y sensibilidad del optimizador para la canasta familiar.</h1>
           <p>
-            Esta vista combina el optimizador de la canasta DANE con visualizaciones de costo y cobertura
-            para explorar escenarios realistas por personas, calorias y horizonte temporal sin ruido adicional.
+            {activeSourceDescription}
           </p>
 
           <div className="statistics-meta-row">
-            <span>Canasta DANE como base</span>
+            <span>{activeSourceLabel}</span>
             <span>Filtros reactivos</span>
             <span>Actualizacion automatica cada 60 s</span>
           </div>
@@ -184,7 +194,7 @@ export default function Statistics() {
                       : 'Costo proyectado segun horizonte de compra'}
                   </h3>
                   <p>
-                    Cada punto recalcula el optimizador con la misma base de datos actual para mostrar sensibilidad del gasto.
+                    Cada punto recalcula el optimizador usando la última base activa para mostrar sensibilidad del gasto.
                   </p>
                 </div>
                 <span className="chart-caption">{projectionRows.length} escenarios</span>

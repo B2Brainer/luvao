@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { orchestratorService } from '../../../services/api'
+import { saveOptimizationContext } from '../../../services/optimizationContext'
 import '../styles/Products.css'
 
 type Stats = {
@@ -529,6 +530,7 @@ function Products() {
     try {
       const res = await orchestratorService.optimizeList(items)
       setOptimizeData(res.data)
+      saveOptimizationContext({ source: 'custom-list', items })
     } catch (err: unknown) {
       setOptimizeError(errorMessage(err, 'No se pudo optimizar la lista.'))
       setOptimizeData(null)
@@ -543,6 +545,7 @@ function Products() {
     try {
       const res = await orchestratorService.optimizeList([])
       setOptimizeData(res.data)
+      saveOptimizationContext({ source: 'dane-basket' })
     } catch (err: unknown) {
       setOptimizeError(errorMessage(err, 'No se pudo optimizar la canasta básica alimentaria.'))
       setOptimizeData(null)

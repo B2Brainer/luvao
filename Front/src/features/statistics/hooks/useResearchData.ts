@@ -1,5 +1,6 @@
 import { keepPreviousData, useQueries, useQuery } from '@tanstack/react-query'
 import { orchestratorService } from '../../../services/api'
+import type { OptimizationContext } from '../../../services/optimizationContext'
 import { buildProjectionRequests, toPeriodDays } from '../research.utils'
 import type {
   OptimizeResponse,
@@ -10,6 +11,10 @@ import type {
 } from '../types'
 
 const REFRESH_INTERVAL_MS = 60_000
+
+function optimizationItems(context: OptimizationContext) {
+  return context.source === 'custom-list' ? context.items : []
+}
 
 export function useResearchBasket() {
   return useQuery({
@@ -24,15 +29,16 @@ export function useResearchBasket() {
   })
 }
 
-export function useResearchScenario(filters: ResearchViewFilters) {
+export function useResearchScenario(filters: ResearchViewFilters, context: OptimizationContext) {
   const periodDays = toPeriodDays(filters.timeUnit, filters.durationValue)
   const targetCalories = Math.round(filters.householdSize * filters.dailyCaloriesPerPerson * periodDays)
+  const items = optimizationItems(context)
 
   return useQuery({
-    queryKey: ['research', 'scenario', filters.householdSize, periodDays, filters.dailyCaloriesPerPerson],
+    queryKey: ['research', 'scenario', context.source, items, filters.householdSize, periodDays, filters.dailyCaloriesPerPerson],
     queryFn: async () => {
       const response = await orchestratorService.optimizeList({
-        items: [],
+        items,
         periodDays,
         targetCalories,
       })
@@ -45,14 +51,15 @@ export function useResearchScenario(filters: ResearchViewFilters) {
   })
 }
 
-export function useProjectionScenarios(filters: ResearchViewFilters) {
+export function useProjectionScenarios(filters: ResearchViewFilters, context: OptimizationContext) {
   const requests = buildProjectionRequests(filters)
+  const items = optimizationItems(context)
   const results = useQueries({
     queries: requests.map((request) => ({
-      queryKey: ['research', 'projection', request.key, request.periodDays, request.targetCalories],
+      queryKey: ['research', 'projection', context.source, items, request.key, request.periodDays, request.targetCalories],
       queryFn: async () => {
         const response = await orchestratorService.optimizeList({
-          items: [],
+          items,
           periodDays: request.periodDays,
           targetCalories: request.targetCalories,
         })

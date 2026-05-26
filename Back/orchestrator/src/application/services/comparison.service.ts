@@ -525,6 +525,10 @@ export class ComparisonService {
 
   async optimizeShoppingList(items?: ShoppingItem[], options: OptimizeOptions = {}) {
     const isManualList = Boolean(items && items.length > 0);
+    const hasScenarioOptions = Boolean(
+      (options.periodDays && options.periodDays > 0) ||
+      (options.targetCalories && options.targetCalories > 0),
+    );
     const requestedItems = isManualList ? items as ShoppingItem[] : await this.getDefaultResearchBasket();
 
     const allRaw: RawScraped[] = await this.scrapedClient.searchByFilters({ availability: true });
@@ -532,6 +536,10 @@ export class ComparisonService {
 
     if (!isManualList) {
       return this.optimizeBasketByCalories(requestedItems as ResearchBasketItem[], canonicalAll, options);
+    }
+
+    if (hasScenarioOptions) {
+      return this.optimizeCustomListByCalories(requestedItems as ShoppingItem[], canonicalAll, options);
     }
 
     const lines = requestedItems.map((item) => {
@@ -579,6 +587,120 @@ export class ComparisonService {
       totalEstimated: total,
       estimatedByStore: byStore,
       lines,
+    };
+  }
+
+  private optimizeCustomListByCalories(
+    requestedItems: ShoppingItem[],
+    canonicalAll: CanonicalProduct[],
+    options: OptimizeOptions,
+  ) {
+    const periodDays = options.periodDays && options.periodDays > 0
+      ? Math.round(options.periodDays)
+      : DEFAULT_PERIOD_DAYS;
+    const targetCalories = options.targetCalories && options.targetCalories > 0
+      ? Math.round(options.targetCalories)
+      : Math.round(DEFAULT_DAILY_CALORIES * periodDays);
+
+    const drafts = requestedItems.map((item) => {
+      const requestedQuantity = item.quantity && item.quantity > 0 ? item.quantity : 1;
+      const candidates = this.getCandidateRanking(item.product, canonicalAll);
+      const bestByStore = this.pickBestByStore(candidates);
+
+      return {
+        requested: item.product,
+        category: 'Lista personalizada',
+        requestedQuantity,
+        quantity: requestedQuantity,
+        targetTokens: this.toCanonicalTokens(item.product),
+        optionsByStore: bestByStore,
+        candidates,
+        selected: null as RankedProduct | null,
+        caloriesPerPackage: null as number | null,
+        targetCalories: null as number | null,
+        plannedCalories: null as number | null,
+        subtotal: null as number | null,
+      };
+    });
+
+    const caloricLines = drafts.filter((line) =>
+      line.candidates.some((candidate) => candidate.nutrition.calories !== null && candidate.nutrition.calories > 0),
+    );
+    const totalWeight = caloricLines.reduce((acc, line) => acc + line.requestedQuantity, 0);
+
+    for (const line of drafts) {
+      const targetPerProduct = totalWeight > 0 && caloricLines.includes(line)
+        ? (targetCalories * line.requestedQuantity) / totalWeight
+        : null;
+      const caloriePlan = targetPerProduct !== null
+        ? this.pickCaloriePlanForTarget(line.candidates, targetPerProduct)
+        : null;
+      const selected = caloriePlan?.selected ??
+        this.pickBestCalorieValue(line.candidates) ??
+        this.pickLowestPriceCandidate(line.candidates) ??
+        line.optionsByStore[0] ??
+        null;
+
+      line.selected = selected;
+
+      if (!line.selected) {
+        line.quantity = 0;
+        continue;
+      }
+
+      line.caloriesPerPackage = line.selected.nutrition.calories;
+
+      if (caloriePlan && targetPerProduct !== null) {
+        line.targetCalories = this.roundNumber(targetPerProduct, 0);
+        line.quantity = caloriePlan.quantity;
+        line.plannedCalories = caloriePlan.plannedCalories;
+      } else if (line.caloriesPerPackage && line.caloriesPerPackage > 0) {
+        line.plannedCalories = this.roundNumber(line.quantity * line.caloriesPerPackage, 0);
+      }
+
+      line.subtotal = line.selected.price ? line.selected.price * line.quantity : null;
+    }
+
+    const selectedLines = drafts.filter((line) => line.selected && line.subtotal !== null);
+    const total = selectedLines.reduce((acc, line) => acc + (line.subtotal as number), 0);
+    const plannedCalories = selectedLines.reduce((acc, line) => acc + (line.plannedCalories ?? 0), 0);
+
+    const byStore: Record<string, number> = {};
+    for (const line of selectedLines) {
+      const store = line.selected?.storeName;
+      if (!store) {
+        continue;
+      }
+      byStore[store] = (byStore[store] ?? 0) + (line.subtotal as number);
+    }
+
+    const unresolved = drafts
+      .filter((line) => !line.selected)
+      .map((line) => line.requested);
+
+    return {
+      mode: 'calorie-plan',
+      periodDays,
+      targetCalories,
+      targetRangeCalories: {
+        min: this.roundNumber((48000 / DEFAULT_PERIOD_DAYS) * periodDays, 0),
+        max: this.roundNumber((90000 / DEFAULT_PERIOD_DAYS) * periodDays, 0),
+      },
+      plannedCalories: this.roundNumber(plannedCalories, 0),
+      categoryTargets: [
+        {
+          category: 'Lista personalizada',
+          share: 1,
+          targetCalories,
+          plannedCalories: this.roundNumber(plannedCalories, 0),
+        },
+      ],
+      requestedItems: requestedItems.length,
+      resolvedItems: selectedLines.length,
+      unresolvedItems: unresolved,
+      totalEstimated: total,
+      estimatedByStore: byStore,
+      lines: drafts.map(({ candidates, requestedQuantity, ...line }) => line),
     };
   }
 
