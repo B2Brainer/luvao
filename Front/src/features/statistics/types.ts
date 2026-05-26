@@ -79,6 +79,16 @@ export type OptimizeResponse = {
   unresolvedItems: string[]
   totalEstimated: number
   estimatedByStore: Record<string, number>
+  storeScenarios?: Array<{
+    storeName: string
+    totalEstimated: number
+    resolvedItems: number
+    requestedItems: number
+    unresolvedItems: string[]
+    coverage: number
+    plannedCalories: number
+    targetCalories: number
+  }>
   lines: OptimizeLine[]
 }
 

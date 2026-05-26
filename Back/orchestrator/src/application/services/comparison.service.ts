@@ -73,6 +73,48 @@ type RankedProduct = CanonicalProduct & {
   matchScore: number;
 };
 
+type OptimizeDraftLine = {
+  requested: string;
+  category: string;
+  requestedQuantity: number;
+  quantity: number;
+  targetTokens: string[];
+  optionsByStore: RankedProduct[];
+  candidates: RankedProduct[];
+  selected: RankedProduct | null;
+  caloriesPerPackage: number | null;
+  targetCalories: number | null;
+  plannedCalories: number | null;
+  subtotal: number | null;
+};
+
+type CategoryTargetSummary = {
+  category: string;
+  share: number;
+  targetCalories: number;
+  plannedCalories: number;
+};
+
+type CalorieScenarioResolution = {
+  selectedLines: OptimizeDraftLine[];
+  totalEstimated: number;
+  plannedCalories: number;
+  categoryTargets: CategoryTargetSummary[];
+  unresolvedItems: string[];
+  estimatedByStore: Record<string, number>;
+};
+
+type StoreScenarioSummary = {
+  storeName: string;
+  totalEstimated: number;
+  resolvedItems: number;
+  requestedItems: number;
+  unresolvedItems: string[];
+  coverage: number;
+  plannedCalories: number;
+  targetCalories: number;
+};
+
 const STOPWORDS = new Set([
   'de',
   'del',
@@ -450,6 +492,24 @@ const CATEGORY_CALORIE_SHARE: Record<string, number> = {
   'Bebidas y otros': 0.01,
 };
 
+const UNCATEGORIZED_LABEL = 'Sin categoría / revisar';
+
+const EXTRA_CATEGORY_BY_PRODUCT: Record<string, string> = {
+  atun: 'Proteínas',
+  manzana: 'Frutas',
+  pera: 'Frutas',
+  papaya: 'Frutas',
+  mango: 'Frutas',
+  pina: 'Frutas',
+  fresa: 'Frutas',
+  uva: 'Frutas',
+  mandarina: 'Frutas',
+  ajo: 'Verduras y hortalizas',
+  cilantro: 'Verduras y hortalizas',
+  pepino: 'Verduras y hortalizas',
+  lechuga: 'Verduras y hortalizas',
+};
+
 const CALORIE_REFERENCES: Record<string, CalorieReference> = {
   arroz: { caloriesPerKg: 1100 },
   pasta: { caloriesPerKg: 1550 },
@@ -539,7 +599,7 @@ export class ComparisonService {
     }
 
     if (hasScenarioOptions) {
-      return this.optimizeCustomListByCalories(requestedItems as ShoppingItem[], canonicalAll, options);
+      return await this.optimizeCustomListByCalories(requestedItems as ShoppingItem[], canonicalAll, options);
     }
 
     const lines = requestedItems.map((item) => {
@@ -586,11 +646,12 @@ export class ComparisonService {
       unresolvedItems: unresolved,
       totalEstimated: total,
       estimatedByStore: byStore,
+      storeScenarios: [],
       lines,
     };
   }
 
-  private optimizeCustomListByCalories(
+  private async optimizeCustomListByCalories(
     requestedItems: ShoppingItem[],
     canonicalAll: CanonicalProduct[],
     options: OptimizeOptions,
@@ -601,82 +662,15 @@ export class ComparisonService {
     const targetCalories = options.targetCalories && options.targetCalories > 0
       ? Math.round(options.targetCalories)
       : Math.round(DEFAULT_DAILY_CALORIES * periodDays);
-
-    const drafts = requestedItems.map((item) => {
-      const requestedQuantity = item.quantity && item.quantity > 0 ? item.quantity : 1;
-      const candidates = this.getCandidateRanking(item.product, canonicalAll);
-      const bestByStore = this.pickBestByStore(candidates);
-
-      return {
-        requested: item.product,
-        category: 'Lista personalizada',
-        requestedQuantity,
-        quantity: requestedQuantity,
-        targetTokens: this.toCanonicalTokens(item.product),
-        optionsByStore: bestByStore,
-        candidates,
-        selected: null as RankedProduct | null,
-        caloriesPerPackage: null as number | null,
-        targetCalories: null as number | null,
-        plannedCalories: null as number | null,
-        subtotal: null as number | null,
-      };
-    });
-
-    const caloricLines = drafts.filter((line) =>
-      line.candidates.some((candidate) => candidate.nutrition.calories !== null && candidate.nutrition.calories > 0),
-    );
-    const totalWeight = caloricLines.reduce((acc, line) => acc + line.requestedQuantity, 0);
-
-    for (const line of drafts) {
-      const targetPerProduct = totalWeight > 0 && caloricLines.includes(line)
-        ? (targetCalories * line.requestedQuantity) / totalWeight
-        : null;
-      const caloriePlan = targetPerProduct !== null
-        ? this.pickCaloriePlanForTarget(line.candidates, targetPerProduct)
-        : null;
-      const selected = caloriePlan?.selected ??
-        this.pickBestCalorieValue(line.candidates) ??
-        this.pickLowestPriceCandidate(line.candidates) ??
-        line.optionsByStore[0] ??
-        null;
-
-      line.selected = selected;
-
-      if (!line.selected) {
-        line.quantity = 0;
-        continue;
-      }
-
-      line.caloriesPerPackage = line.selected.nutrition.calories;
-
-      if (caloriePlan && targetPerProduct !== null) {
-        line.targetCalories = this.roundNumber(targetPerProduct, 0);
-        line.quantity = caloriePlan.quantity;
-        line.plannedCalories = caloriePlan.plannedCalories;
-      } else if (line.caloriesPerPackage && line.caloriesPerPackage > 0) {
-        line.plannedCalories = this.roundNumber(line.quantity * line.caloriesPerPackage, 0);
-      }
-
-      line.subtotal = line.selected.price ? line.selected.price * line.quantity : null;
-    }
-
-    const selectedLines = drafts.filter((line) => line.selected && line.subtotal !== null);
-    const total = selectedLines.reduce((acc, line) => acc + (line.subtotal as number), 0);
-    const plannedCalories = selectedLines.reduce((acc, line) => acc + (line.plannedCalories ?? 0), 0);
-
-    const byStore: Record<string, number> = {};
-    for (const line of selectedLines) {
-      const store = line.selected?.storeName;
-      if (!store) {
-        continue;
-      }
-      byStore[store] = (byStore[store] ?? 0) + (line.subtotal as number);
-    }
-
-    const unresolved = drafts
-      .filter((line) => !line.selected)
-      .map((line) => line.requested);
+    const categoryLookup = await this.getResearchCategoryLookup();
+    const drafts = requestedItems.map((item) => this.buildDraftLine(
+      item.product,
+      item.quantity && item.quantity > 0 ? item.quantity : 1,
+      this.inferCategoryForProduct(item.product, categoryLookup),
+      canonicalAll,
+    ));
+    const scenario = this.resolveCalorieScenario(drafts, targetCalories, { distributeByRequestedWeight: true });
+    const storeScenarios = this.buildStoreScenarioSummaries(drafts, targetCalories, { distributeByRequestedWeight: true });
 
     return {
       mode: 'calorie-plan',
@@ -686,21 +680,15 @@ export class ComparisonService {
         min: this.roundNumber((48000 / DEFAULT_PERIOD_DAYS) * periodDays, 0),
         max: this.roundNumber((90000 / DEFAULT_PERIOD_DAYS) * periodDays, 0),
       },
-      plannedCalories: this.roundNumber(plannedCalories, 0),
-      categoryTargets: [
-        {
-          category: 'Lista personalizada',
-          share: 1,
-          targetCalories,
-          plannedCalories: this.roundNumber(plannedCalories, 0),
-        },
-      ],
+      plannedCalories: scenario.plannedCalories,
+      categoryTargets: scenario.categoryTargets,
       requestedItems: requestedItems.length,
-      resolvedItems: selectedLines.length,
-      unresolvedItems: unresolved,
-      totalEstimated: total,
-      estimatedByStore: byStore,
-      lines: drafts.map(({ candidates, requestedQuantity, ...line }) => line),
+      resolvedItems: scenario.selectedLines.length,
+      unresolvedItems: scenario.unresolvedItems,
+      totalEstimated: scenario.totalEstimated,
+      estimatedByStore: scenario.estimatedByStore,
+      storeScenarios,
+      lines: drafts.map((line) => this.serializeOptimizeLine(line)),
     };
   }
 
@@ -719,28 +707,92 @@ export class ComparisonService {
     const targetCalories = options.targetCalories && options.targetCalories > 0
       ? Math.round(options.targetCalories)
       : Math.round(DEFAULT_DAILY_CALORIES * periodDays);
+    const drafts = requestedItems.map((item) => this.buildDraftLine(
+      item.product,
+      item.quantity && item.quantity > 0 ? item.quantity : 1,
+      item.category ?? UNCATEGORIZED_LABEL,
+      canonicalAll,
+    ));
+    const scenario = this.resolveCalorieScenario(drafts, targetCalories, { distributeByRequestedWeight: false });
+    const storeScenarios = this.buildStoreScenarioSummaries(drafts, targetCalories, { distributeByRequestedWeight: false });
 
-    const drafts = requestedItems.map((item) => {
-      const targetTokens = this.toCanonicalTokens(item.product);
-      const candidates = this.getCandidateRanking(item.product, canonicalAll);
-      const bestByStore = this.pickBestByStore(candidates);
+    return {
+      mode: 'calorie-plan',
+      periodDays,
+      targetCalories,
+      targetRangeCalories: {
+        min: this.roundNumber((48000 / DEFAULT_PERIOD_DAYS) * periodDays, 0),
+        max: this.roundNumber((90000 / DEFAULT_PERIOD_DAYS) * periodDays, 0),
+      },
+      plannedCalories: scenario.plannedCalories,
+      categoryTargets: scenario.categoryTargets,
+      requestedItems: requestedItems.length,
+      resolvedItems: scenario.selectedLines.length,
+      unresolvedItems: scenario.unresolvedItems,
+      totalEstimated: scenario.totalEstimated,
+      estimatedByStore: scenario.estimatedByStore,
+      storeScenarios,
+      lines: drafts.map((line) => this.serializeOptimizeLine(line)),
+    };
+  }
 
-      return {
-        requested: item.product,
-        category: item.category ?? 'Sin categoría',
-        quantity: item.quantity && item.quantity > 0 ? item.quantity : 1,
-        targetTokens,
-        optionsByStore: bestByStore,
-        candidates,
-        selected: null as RankedProduct | null,
-        caloriesPerPackage: null as number | null,
-        targetCalories: null as number | null,
-        plannedCalories: null as number | null,
-        subtotal: null as number | null,
-      };
-    });
+  private buildDraftLine(
+    product: string,
+    requestedQuantity: number,
+    category: string,
+    canonicalAll: CanonicalProduct[],
+  ): OptimizeDraftLine {
+    const safeQuantity = requestedQuantity > 0 ? requestedQuantity : 1;
+    const candidates = this.getCandidateRanking(product, canonicalAll);
 
-    const categoryGroups = new Map<string, typeof drafts>();
+    return {
+      requested: product,
+      category,
+      requestedQuantity: safeQuantity,
+      quantity: safeQuantity,
+      targetTokens: this.toCanonicalTokens(product),
+      optionsByStore: this.pickBestByStore(candidates),
+      candidates,
+      selected: null,
+      caloriesPerPackage: null,
+      targetCalories: null,
+      plannedCalories: null,
+      subtotal: null,
+    };
+  }
+
+  private cloneDraftLine(line: OptimizeDraftLine, storeName?: string): OptimizeDraftLine {
+    const filteredCandidates = storeName
+      ? line.candidates.filter((candidate) => this.storeKey(candidate.storeName) === this.storeKey(storeName))
+      : line.candidates;
+
+    return {
+      requested: line.requested,
+      category: line.category,
+      requestedQuantity: line.requestedQuantity,
+      quantity: line.requestedQuantity,
+      targetTokens: [...line.targetTokens],
+      optionsByStore: this.pickBestByStore(filteredCandidates),
+      candidates: filteredCandidates,
+      selected: null,
+      caloriesPerPackage: null,
+      targetCalories: null,
+      plannedCalories: null,
+      subtotal: null,
+    };
+  }
+
+  private serializeOptimizeLine(line: OptimizeDraftLine) {
+    const { candidates, requestedQuantity, ...rest } = line;
+    return rest;
+  }
+
+  private resolveCalorieScenario(
+    drafts: OptimizeDraftLine[],
+    targetCalories: number,
+    options: { distributeByRequestedWeight: boolean },
+  ): CalorieScenarioResolution {
+    const categoryGroups = new Map<string, OptimizeDraftLine[]>();
     for (const draft of drafts) {
       const current = categoryGroups.get(draft.category) ?? [];
       current.push(draft);
@@ -753,11 +805,13 @@ export class ComparisonService {
       const caloricLines = categoryLines.filter((line) =>
         line.candidates.some((candidate) => candidate.nutrition.calories !== null && candidate.nutrition.calories > 0),
       );
-      const targetPerProduct = categoryTarget !== null && caloricLines.length > 0
-        ? categoryTarget / caloricLines.length
-        : null;
+      const totalWeight = caloricLines.reduce((acc, line) => acc + (options.distributeByRequestedWeight ? line.requestedQuantity : 1), 0);
 
       for (const line of categoryLines) {
+        const lineWeight = options.distributeByRequestedWeight ? line.requestedQuantity : 1;
+        const targetPerProduct = categoryTarget !== null && caloricLines.includes(line) && totalWeight > 0
+          ? (categoryTarget * lineWeight) / totalWeight
+          : null;
         const caloriePlan = targetPerProduct !== null
           ? this.pickCaloriePlanForTarget(line.candidates, targetPerProduct)
           : null;
@@ -768,6 +822,10 @@ export class ComparisonService {
           null;
         line.selected = selected;
 
+        if (targetPerProduct !== null) {
+          line.targetCalories = this.roundNumber(targetPerProduct, 0);
+        }
+
         if (!line.selected) {
           line.quantity = 0;
           continue;
@@ -776,10 +834,10 @@ export class ComparisonService {
         line.caloriesPerPackage = line.selected.nutrition.calories;
 
         if (caloriePlan && targetPerProduct !== null) {
-          line.targetCalories = this.roundNumber(targetPerProduct, 0);
           line.quantity = caloriePlan.quantity;
           line.plannedCalories = caloriePlan.plannedCalories;
         } else if (line.caloriesPerPackage && line.caloriesPerPackage > 0) {
+          line.quantity = line.requestedQuantity;
           line.plannedCalories = this.roundNumber(line.quantity * line.caloriesPerPackage, 0);
         }
 
@@ -788,47 +846,153 @@ export class ComparisonService {
     }
 
     const selectedLines = drafts.filter((line) => line.selected && line.subtotal !== null);
-    const total = selectedLines.reduce((acc, line) => acc + (line.subtotal as number), 0);
+    const totalEstimated = selectedLines.reduce((acc, line) => acc + (line.subtotal as number), 0);
     const plannedCalories = selectedLines.reduce((acc, line) => acc + (line.plannedCalories ?? 0), 0);
-
-    const byStore: Record<string, number> = {};
+    const estimatedByStore: Record<string, number> = {};
     const plannedByCategory: Record<string, number> = {};
+
     for (const line of selectedLines) {
       const store = line.selected?.storeName;
       if (store) {
-        byStore[store] = (byStore[store] ?? 0) + (line.subtotal as number);
+        estimatedByStore[store] = (estimatedByStore[store] ?? 0) + (line.subtotal as number);
       }
       plannedByCategory[line.category] = (plannedByCategory[line.category] ?? 0) + (line.plannedCalories ?? 0);
     }
 
-    const categoryTargets = Object.entries(CATEGORY_CALORIE_SHARE).map(([category, share]) => ({
+    return {
+      selectedLines,
+      totalEstimated,
+      plannedCalories: this.roundNumber(plannedCalories, 0),
+      categoryTargets: this.buildCategoryTargets(targetCalories, drafts, plannedByCategory),
+      unresolvedItems: drafts.filter((line) => !line.selected).map((line) => line.requested),
+      estimatedByStore,
+    };
+  }
+
+  private buildCategoryTargets(
+    targetCalories: number,
+    drafts: OptimizeDraftLine[],
+    plannedByCategory: Record<string, number>,
+  ): CategoryTargetSummary[] {
+    const knownCategories = Object.keys(CATEGORY_CALORIE_SHARE);
+    const additionalCategories = [...new Set(drafts.map((line) => line.category))]
+      .filter((category) => !CATEGORY_CALORIE_SHARE[category])
+      .sort((left, right) => left.localeCompare(right));
+
+    return [...knownCategories, ...additionalCategories].map((category) => ({
       category,
-      share,
-      targetCalories: this.roundNumber(targetCalories * share, 0),
+      share: CATEGORY_CALORIE_SHARE[category] ?? 0,
+      targetCalories: this.roundNumber(targetCalories * (CATEGORY_CALORIE_SHARE[category] ?? 0), 0),
       plannedCalories: this.roundNumber(plannedByCategory[category] ?? 0, 0),
     }));
+  }
 
-    const unresolved = drafts
-      .filter((line) => !line.selected)
-      .map((line) => line.requested);
+  private buildStoreScenarioSummaries(
+    drafts: OptimizeDraftLine[],
+    targetCalories: number,
+    options: { distributeByRequestedWeight: boolean },
+  ): StoreScenarioSummary[] {
+    return this.collectAvailableStores(drafts)
+      .map((storeName) => {
+        const storeDrafts = drafts.map((line) => this.cloneDraftLine(line, storeName));
+        const resolution = this.resolveCalorieScenario(storeDrafts, targetCalories, options);
 
-    return {
-      mode: 'calorie-plan',
-      periodDays,
-      targetCalories,
-      targetRangeCalories: {
-        min: this.roundNumber((48000 / DEFAULT_PERIOD_DAYS) * periodDays, 0),
-        max: this.roundNumber((90000 / DEFAULT_PERIOD_DAYS) * periodDays, 0),
-      },
-      plannedCalories: this.roundNumber(plannedCalories, 0),
-      categoryTargets,
-      requestedItems: requestedItems.length,
-      resolvedItems: selectedLines.length,
-      unresolvedItems: unresolved,
-      totalEstimated: total,
-      estimatedByStore: byStore,
-      lines: drafts.map(({ candidates, ...line }) => line),
-    };
+        return {
+          storeName,
+          totalEstimated: resolution.totalEstimated,
+          resolvedItems: resolution.selectedLines.length,
+          requestedItems: storeDrafts.length,
+          unresolvedItems: resolution.unresolvedItems,
+          coverage: storeDrafts.length > 0 ? this.roundNumber(resolution.selectedLines.length / storeDrafts.length, 4) : 0,
+          plannedCalories: resolution.plannedCalories,
+          targetCalories,
+        };
+      })
+      .sort((left, right) => {
+        const byCoverage = right.coverage - left.coverage;
+        if (byCoverage !== 0) {
+          return byCoverage;
+        }
+
+        const byTotal = left.totalEstimated - right.totalEstimated;
+        if (byTotal !== 0) {
+          return byTotal;
+        }
+
+        return left.storeName.localeCompare(right.storeName);
+      });
+  }
+
+  private collectAvailableStores(drafts: OptimizeDraftLine[]): string[] {
+    const stores = new Map<string, string>();
+
+    for (const line of drafts) {
+      for (const candidate of line.candidates) {
+        const key = this.storeKey(candidate.storeName);
+        if (!stores.has(key)) {
+          stores.set(key, candidate.storeName);
+        }
+      }
+    }
+
+    return [...stores.values()];
+  }
+
+  private async getResearchCategoryLookup(): Promise<Map<string, string>> {
+    const lookup = new Map<string, string>();
+
+    for (const [product, category] of Object.entries(EXTRA_CATEGORY_BY_PRODUCT)) {
+      lookup.set(product, category);
+    }
+
+    try {
+      const basket = await this.productClient.getDaneFamilyBasket();
+      if (Array.isArray(basket)) {
+        for (const item of basket as ResearchBasketItem[]) {
+          if (!item.product || !item.category) {
+            continue;
+          }
+
+          lookup.set(this.normalizeText(item.product), item.category);
+        }
+      }
+    } catch {
+      // Si el catálogo investigativo no está disponible, se conservan solo reglas locales.
+    }
+
+    return lookup;
+  }
+
+  private inferCategoryForProduct(product: string, categoryLookup: Map<string, string>): string {
+    const normalized = this.normalizeText(product);
+    const exactCategory = categoryLookup.get(normalized);
+    if (exactCategory) {
+      return exactCategory;
+    }
+
+    const candidateTokens = this.toCanonicalTokens(product);
+    const pseudoCandidate = {
+      canonicalTokens: candidateTokens,
+      normalizedName: normalized,
+    } as CanonicalProduct;
+    let bestMatch: { category: string; score: number } | null = null;
+
+    for (const [knownProduct, category] of categoryLookup.entries()) {
+      const score = this.computeTextMatchScore(this.getTargetMatchTokens(knownProduct), candidateTokens);
+      if (score < 0.55) {
+        continue;
+      }
+
+      if (!this.isRelevantForTarget(knownProduct, pseudoCandidate)) {
+        continue;
+      }
+
+      if (!bestMatch || score > bestMatch.score) {
+        bestMatch = { category, score };
+      }
+    }
+
+    return bestMatch?.category ?? UNCATEGORIZED_LABEL;
   }
 
   private getCandidateRanking(product: string, canonicalAll: CanonicalProduct[]): RankedProduct[] {

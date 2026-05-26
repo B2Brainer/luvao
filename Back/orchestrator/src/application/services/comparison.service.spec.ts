@@ -6,9 +6,9 @@ type MatchAuditCase = {
   invalidName: string;
 };
 
-const makeCandidate = (id: string, query: string, name: string, price: number) => ({
+const makeCandidate = (id: string, query: string, name: string, price: number, storeName = 'Exito') => ({
   id,
-  storeName: 'Exito',
+  storeName,
   query,
   name,
   price,
@@ -72,12 +72,22 @@ describe('ComparisonService', () => {
   const scrapedClient = {
     searchByFilters: jest.fn(),
   };
+  const productClient = {
+    getDaneFamilyBasket: jest.fn(),
+    getProductNames: jest.fn(),
+  };
 
-  const service = new ComparisonService(scrapedClient as never, {} as never);
+  const service = new ComparisonService(scrapedClient as never, productClient as never);
   const serviceInternals = service as any;
 
   beforeEach(() => {
     jest.clearAllMocks();
+    productClient.getDaneFamilyBasket.mockResolvedValue([
+      { product: 'arroz', quantity: 1, category: 'Cereales y harinas', unit: 'kg' },
+      { product: 'pollo', quantity: 1, category: 'Proteínas', unit: 'kg' },
+      { product: 'atun', quantity: 1, category: 'Proteínas', unit: 'und' },
+    ]);
+    productClient.getProductNames.mockResolvedValue(['arroz', 'pollo', 'atun']);
   });
 
   it.each(basketAuditCases)('mantiene coherencia semantica para %s', async ({ query, validName, invalidName }) => {
@@ -129,8 +139,10 @@ describe('ComparisonService', () => {
 
   it('recalcula un escenario estadistico para la ultima lista personalizada', async () => {
     scrapedClient.searchByFilters.mockResolvedValue([
-      makeCandidate('arroz', 'arroz', 'Arroz Diana 500 g', 2500),
-      makeCandidate('pollo', 'pollo', 'Pechuga de pollo 500 g', 9000),
+      makeCandidate('arroz-exito', 'arroz', 'Arroz Diana 500 g', 2500, 'Exito'),
+      makeCandidate('arroz-olimpica', 'arroz', 'Arroz Diana 500 g', 2800, 'Olimpica'),
+      makeCandidate('pollo-exito', 'pollo', 'Pechuga de pollo 500 g', 9000, 'Exito'),
+      makeCandidate('pollo-olimpica', 'pollo', 'Pechuga de pollo 500 g', 9500, 'Olimpica'),
     ])
 
     const result = await service.optimizeShoppingList(
@@ -143,17 +155,40 @@ describe('ComparisonService', () => {
 
     expect(result.mode).toBe('calorie-plan')
     expect(result.targetCalories).toBe(3000)
-    expect(result.categoryTargets).toEqual([
-      expect.objectContaining({
-        category: 'Lista personalizada',
-        targetCalories: 3000,
-      }),
-    ])
+    expect(result.categoryTargets).toEqual(expect.arrayContaining([
+      expect.objectContaining({ category: 'Cereales y harinas', targetCalories: 840 }),
+      expect.objectContaining({ category: 'Proteínas', targetCalories: 510 }),
+    ]))
     expect(result.lines).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ requested: 'arroz', category: 'Lista personalizada', targetCalories: 2000 }),
-        expect.objectContaining({ requested: 'pollo', category: 'Lista personalizada', targetCalories: 1000 }),
+        expect.objectContaining({ requested: 'arroz', category: 'Cereales y harinas', targetCalories: 840 }),
+        expect.objectContaining({ requested: 'pollo', category: 'Proteínas', targetCalories: 510 }),
       ]),
     )
+    expect(result.storeScenarios).toEqual([
+      expect.objectContaining({ storeName: 'Exito', coverage: 1, totalEstimated: 14000 }),
+      expect.objectContaining({ storeName: 'Olimpica', coverage: 1, totalEstimated: 15100 }),
+    ])
+  })
+
+  it('expone cobertura parcial al simular la misma lista en una sola tienda', async () => {
+    scrapedClient.searchByFilters.mockResolvedValue([
+      makeCandidate('arroz-exito', 'arroz', 'Arroz Diana 500 g', 2500, 'Exito'),
+      makeCandidate('arroz-olimpica', 'arroz', 'Arroz Diana 500 g', 2800, 'Olimpica'),
+      makeCandidate('pollo-exito', 'pollo', 'Pechuga de pollo 500 g', 9000, 'Exito'),
+    ])
+
+    const result = await service.optimizeShoppingList(
+      [
+        { product: 'arroz', quantity: 2 },
+        { product: 'pollo', quantity: 1 },
+      ],
+      { periodDays: 30, targetCalories: 3000 },
+    )
+
+    expect(result.storeScenarios).toEqual([
+      expect.objectContaining({ storeName: 'Exito', coverage: 1, unresolvedItems: [], totalEstimated: 14000 }),
+      expect.objectContaining({ storeName: 'Olimpica', coverage: 0.5, unresolvedItems: ['pollo'], totalEstimated: 5600 }),
+    ])
   })
 });

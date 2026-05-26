@@ -136,12 +136,39 @@ export function buildStoreSpendRows(response: OptimizeResponse | null | undefine
     return []
   }
 
+   if (response.storeScenarios?.length) {
+    return response.storeScenarios.map((item, index) => ({
+      name: item.storeName,
+      value: item.totalEstimated,
+      coverage: item.coverage,
+      resolvedItems: item.resolvedItems,
+      requestedItems: item.requestedItems,
+      unresolvedItems: item.unresolvedItems,
+      missingCount: item.unresolvedItems.length,
+      missingLabel: item.unresolvedItems.length === 0
+        ? 'Cobertura completa'
+        : item.unresolvedItems.length <= 2
+          ? item.unresolvedItems.join(', ')
+          : `${item.unresolvedItems.slice(0, 2).join(', ')} +${item.unresolvedItems.length - 2}`,
+      plannedCalories: item.plannedCalories,
+      targetCalories: item.targetCalories,
+      fill: storePalette[index % storePalette.length],
+    }))
+  }
+
   return Object.entries(response.estimatedByStore)
     .sort((left, right) => right[1] - left[1])
     .map(([name, value], index) => ({
       name,
       value,
-      share: response.totalEstimated > 0 ? value / response.totalEstimated : 0,
+      coverage: 1,
+      resolvedItems: response.resolvedItems,
+      requestedItems: response.requestedItems,
+      unresolvedItems: response.unresolvedItems,
+      missingCount: response.unresolvedItems.length,
+      missingLabel: response.unresolvedItems.length === 0 ? 'Cobertura completa' : response.unresolvedItems.join(', '),
+      plannedCalories: response.plannedCalories ?? 0,
+      targetCalories: response.targetCalories ?? 0,
       fill: storePalette[index % storePalette.length],
     }))
 }

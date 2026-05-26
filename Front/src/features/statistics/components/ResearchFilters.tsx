@@ -3,20 +3,16 @@ import type { ResearchViewFilters } from '../types'
 type ResearchFiltersProps = {
   filters: ResearchViewFilters
   onChange: (patch: Partial<ResearchViewFilters>) => void
-  productOptions: string[]
-  storeOptions: string[]
 }
 
 export default function ResearchFilters({
   filters,
   onChange,
-  productOptions,
-  storeOptions,
 }: ResearchFiltersProps) {
   return (
     <section className="research-filter-card">
       <h2>Parametros de investigacion</h2>
-      <p>Ajusta el escenario para recalcular costo, cobertura y referencias de mercado sin salir de la pagina.</p>
+      <p>Ajusta el escenario activo para recalcular costo, cobertura y planeacion calorica sin salir de la pagina.</p>
 
       <div className="research-filter-grid">
         <label className="form-field">
@@ -75,52 +71,13 @@ export default function ResearchFilters({
             <option value="duration">Costo por tiempo</option>
           </select>
         </label>
-
-        <label className="form-field">
-          <span>Ventana de referencia</span>
-          <select
-            value={filters.priceWindowDays}
-            onChange={(event) => onChange({ priceWindowDays: Number(event.target.value) || 30 })}
-          >
-            <option value={7}>7 dias</option>
-            <option value={15}>15 dias</option>
-            <option value={30}>30 dias</option>
-            <option value={60}>60 dias</option>
-            <option value={90}>90 dias</option>
-          </select>
-        </label>
-
-        <label className="form-field full">
-          <span>Producto de referencia</span>
-          <select
-            value={filters.priceQuery}
-            onChange={(event) => onChange({ priceQuery: event.target.value })}
-          >
-            {productOptions.map((option) => (
-              <option key={option} value={option}>{option}</option>
-            ))}
-          </select>
-        </label>
-
-        <label className="form-field full">
-          <span>Tienda de referencia</span>
-          <select
-            value={filters.priceStoreName}
-            onChange={(event) => onChange({ priceStoreName: event.target.value })}
-          >
-            <option value="">Todas las tiendas</option>
-            {storeOptions.map((option) => (
-              <option key={option} value={option}>{option}</option>
-            ))}
-          </select>
-        </label>
       </div>
 
       <div className="research-filter-note">
         <strong>Lectura recomendada</strong>
         <p>
-          Cambia primero personas y tiempo para ver costo total. Luego ajusta producto y tienda para contextualizar
-          mejor los registros observados en la vista.
+          Cambia primero personas, tiempo y kcal para tensionar el escenario. La proyeccion, la comparacion por tienda
+          y la distribucion calorica se recalculan con cada cambio.
         </p>
       </div>
     </section>

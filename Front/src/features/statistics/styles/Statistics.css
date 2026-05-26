@@ -217,6 +217,7 @@
 .chart-caption,
 .summary-inline span,
 .insight-list li,
+.store-scenario-header span,
 .store-legend small,
 .store-legend span,
 .store-legend strong,
@@ -264,6 +265,38 @@
   display: flex;
   flex-wrap: wrap;
   gap: 0.75rem;
+}
+
+.store-scenario-list {
+  list-style: none;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.store-scenario-list li {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.95rem;
+  border: 1px solid rgba(20, 32, 51, 0.08);
+  border-radius: 12px;
+  background: #f7fafd;
+}
+
+.store-scenario-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: center;
+}
+
+.store-scenario-header strong {
+  color: var(--navy-900);
+}
+
+.store-scenario-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
 }
 
 .store-legend {

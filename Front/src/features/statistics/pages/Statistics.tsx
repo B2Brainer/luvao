@@ -6,10 +6,7 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
-  Cell,
   Legend,
-  Pie,
-  PieChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -17,14 +14,11 @@ import {
 } from 'recharts'
 import ResearchFilters from '../components/ResearchFilters'
 import {
-  usePriceStats,
   useProjectionScenarios,
-  useResearchBasket,
   useResearchScenario,
 } from '../hooks/useResearchData'
 import {
   buildCategoryTargetRows,
-  buildCoverageRows,
   buildStoreSpendRows,
   compactNumber,
   formatCalories,
@@ -62,35 +56,12 @@ export default function Statistics() {
     ? { source: 'dane-basket' as const, items: [], updatedAt: optimizationContext.updatedAt }
     : optimizationContext
 
-  const basketQuery = useResearchBasket()
-  const basketItems = basketQuery.data ?? []
-  const activeSourceItems = effectiveContext.source === 'custom-list'
-    ? effectiveContext.items.map((item) => item.product)
-    : basketItems.map((item) => item.product)
-  const productOptions = [...new Set(activeSourceItems)].sort((a, b) => a.localeCompare(b))
-  const activePriceQuery = productOptions.includes(filters.priceQuery)
-    ? filters.priceQuery
-    : productOptions[0] || ''
-  const queryFilters = {
-    ...filters,
-    priceQuery: activePriceQuery,
-  }
-
   const scenarioQuery = useResearchScenario(filters, effectiveContext)
   const projectionQuery = useProjectionScenarios(filters, effectiveContext)
-  const priceStatsQuery = usePriceStats(queryFilters)
 
   const scenario = scenarioQuery.data ?? null
-  const storeOptions = [
-    ...new Set([
-      ...(scenario ? Object.keys(scenario.estimatedByStore) : []),
-      ...((priceStatsQuery.data?.byStore ?? []).map((item) => item.storeName)),
-      ...(filters.priceStoreName ? [filters.priceStoreName] : []),
-    ]),
-  ].sort((a, b) => a.localeCompare(b))
 
   const categoryRows = buildCategoryTargetRows(scenario)
-  const coverageRows = buildCoverageRows(scenario?.lines ?? [])
   const storeSpendRows = buildStoreSpendRows(scenario)
   const projectionRows = projectionQuery.data
     .filter((item) => item.scenario)
@@ -112,13 +83,8 @@ export default function Statistics() {
       <section className="statistics-layout">
         <aside className="statistics-sidebar">
           <ResearchFilters
-            filters={{
-              ...filters,
-              priceQuery: activePriceQuery,
-            }}
+            filters={filters}
             onChange={(patch) => setFilters((current) => ({ ...current, ...patch }))}
-            productOptions={productOptions}
-            storeOptions={storeOptions}
           />
         </aside>
 
@@ -234,7 +200,7 @@ export default function Statistics() {
               <div className="statistics-card-head">
                 <div>
                   <h3>Cumplimiento calorico por categoria</h3>
-                  <p>Compara el objetivo teorico del optimizador con las kcal efectivamente planificadas.</p>
+                  <p>Compara la distribucion objetivo DANE contra lo que realmente logra planificar la canasta activa.</p>
                 </div>
               </div>
 
@@ -263,69 +229,52 @@ export default function Statistics() {
             <article className="statistics-card">
               <div className="statistics-card-head">
                 <div>
-                  <h3>Distribucion del gasto por tienda</h3>
-                  <p>Lectura rapida de concentracion del costo total en cada retail.</p>
+                  <h3>Costo si compras todo en una sola tienda</h3>
+                  <p>Recalcula la misma canasta activa limitando la seleccion a un solo retail y mostrando cobertura real.</p>
                 </div>
+                <span className="chart-caption">{storeSpendRows.length} tiendas</span>
               </div>
 
               {!storeSpendRows.length ? (
-                <div className="loading-block">Esperando distribucion por tienda...</div>
+                <div className="loading-block">Esperando simulacion por tienda...</div>
               ) : (
                 <div className="chart-shell">
-                  <ResponsiveContainer width="100%" height={280}>
-                    <PieChart>
-                      <Tooltip formatter={(value) => [formatCurrency(tooltipNumber(value)), 'Costo']} />
-                      <Pie data={storeSpendRows} dataKey="value" nameKey="name" innerRadius={62} outerRadius={96} paddingAngle={2}>
-                        {storeSpendRows.map((entry) => (
-                          <Cell key={entry.name} fill={entry.fill} />
-                        ))}
-                      </Pie>
-                    </PieChart>
-                  </ResponsiveContainer>
-
-                  <ul className="store-legend">
-                    {storeSpendRows.map((row) => (
-                      <li key={row.name}>
-                        <span className="store-dot" style={{ backgroundColor: row.fill }} />
-                        <span>{row.name}</span>
-                        <strong>{formatCurrency(row.value)}</strong>
-                        <small>{formatPercent(row.share)}</small>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </article>
-
-            <article className="statistics-card">
-              <div className="statistics-card-head">
-                <div>
-                  <h3>Cobertura del optimizador por categoria</h3>
-                  <p>Cuantos items quedaron resueltos y cuantos siguen sin match en el catalogo actual.</p>
-                </div>
-              </div>
-
-              {!coverageRows.length ? (
-                <div className="loading-block">Analizando cobertura...</div>
-              ) : (
-                <div className="chart-shell tall">
-                  <ResponsiveContainer width="100%" height={340}>
-                    <BarChart data={coverageRows} layout="vertical" margin={{ left: 10, right: 10 }}>
+                  <ResponsiveContainer width="100%" height={320}>
+                    <BarChart data={storeSpendRows} layout="vertical" margin={{ left: 10, right: 12 }}>
                       <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="rgba(20,32,51,0.08)" />
-                      <XAxis type="number" stroke="#526173" allowDecimals={false} />
-                      <YAxis type="category" dataKey="category" width={118} stroke="#526173" />
-                      <Tooltip formatter={(value, name) => [tooltipNumber(value), name === 'resolved' ? 'Resueltos' : 'Sin match']} />
-                      <Legend />
-                      <Bar dataKey="resolved" fill="#14b8a6" radius={[0, 8, 8, 0]} name="Resueltos" />
-                      <Bar dataKey="unresolved" fill="#fb7185" radius={[0, 8, 8, 0]} name="Sin match" />
+                      <XAxis type="number" stroke="#526173" tickFormatter={(value: number) => formatCurrency(value)} width={96} />
+                      <YAxis type="category" dataKey="name" width={108} stroke="#526173" />
+                      <Tooltip
+                        formatter={(value) => [formatCurrency(tooltipNumber(value)), 'Costo estimado']}
+                        contentStyle={{ borderRadius: 12, borderColor: 'rgba(14,23,46,0.08)' }}
+                      />
+                      <Bar dataKey="value" fill="#2563eb" radius={[0, 8, 8, 0]} name="Costo estimado" />
                     </BarChart>
                   </ResponsiveContainer>
 
-                  <div className="coverage-list">
-                    {coverageRows.map((row) => (
-                      <span key={row.category}>{row.category}: {formatPercent(row.coverage)}</span>
+                  <ul className="store-scenario-list">
+                    {storeSpendRows.map((row) => (
+                      <li key={row.name}>
+                        <div className="store-scenario-header">
+                          <strong>{row.name}</strong>
+                          <span>{formatCurrency(row.value)}</span>
+                        </div>
+                        <div className="store-scenario-meta">
+                          <span className={`statistics-chip${row.coverage < 1 ? ' alert' : ''}`}>
+                            Cobertura {formatPercent(row.coverage)}
+                          </span>
+                          <span className="statistics-chip">
+                            Resueltos {row.resolvedItems}/{row.requestedItems}
+                          </span>
+                          {row.missingCount > 0 && (
+                            <span className="statistics-chip alert">
+                              Faltan {row.missingCount}: {row.missingLabel}
+                            </span>
+                          )}
+                        </div>
+                      </li>
                     ))}
-                  </div>
+                  </ul>
                 </div>
               )}
             </article>
