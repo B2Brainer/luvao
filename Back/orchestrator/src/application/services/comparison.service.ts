@@ -139,6 +139,18 @@ const TOKEN_SYNONYMS: Record<string, string> = {
   guayabas: 'guayaba',
   moras: 'mora',
   maracuyas: 'maracuya',
+  manzanas: 'manzana',
+  peras: 'pera',
+  papayas: 'papaya',
+  mangos: 'mango',
+  pinas: 'pina',
+  fresas: 'fresa',
+  uvas: 'uva',
+  mandarinas: 'mandarina',
+  ajos: 'ajo',
+  cilantros: 'cilantro',
+  pepinos: 'pepino',
+  lechugas: 'lechuga',
   quesos: 'queso',
   campesinos: 'campesino',
   margarinas: 'margarina',
@@ -146,8 +158,8 @@ const TOKEN_SYNONYMS: Record<string, string> = {
   panelas: 'panela',
   huevo: 'huevo',
   huevos: 'huevo',
-  atun: 'atún',
-  atunes: 'atún',
+  atun: 'atun',
+  atunes: 'atun',
   pack: 'paq',
   paquete: 'paq',
   paquetes: 'paq',
@@ -274,6 +286,101 @@ const BASE_PRODUCT_DERIVATIVE_STEMS = [
   'refresc',
 ];
 
+const FRESH_PRODUCE_TARGETS = new Set([
+  'papa',
+  'yuca',
+  'platano verde',
+  'tomate',
+  'cebolla cabezona',
+  'cebolla larga',
+  'zanahoria',
+  'habichuela',
+  'banano',
+  'naranja',
+  'limon',
+  'guayaba',
+  'mora',
+  'maracuya',
+  'tomate de arbol',
+  'manzana',
+  'pera',
+  'papaya',
+  'mango',
+  'pina',
+  'fresa',
+  'uva',
+  'mandarina',
+  'ajo',
+  'cilantro',
+  'pepino',
+  'lechuga',
+]);
+
+const FRESH_PRODUCE_DERIVATIVE_STEMS = [
+  'gelatina',
+  'natilla',
+  'flan',
+  'mousse',
+  'postre',
+  'dulce',
+  'mermelada',
+  'jalea',
+  'compota',
+  'conserva',
+  'almibar',
+  'pulpa',
+  'concentr',
+  'nectar',
+  'jarabe',
+  'sirope',
+  'bebida',
+  'batido',
+  'jugo',
+  'refresc',
+  'gaseosa',
+  'sabor',
+  'tea',
+  'infusion',
+  'aromatica',
+  'yogur',
+  'yogurt',
+  'yoghurt',
+  'yogo',
+  'helado',
+  'galleta',
+  'cereal',
+  'granola',
+  'barra',
+  'caramelo',
+  'gomita',
+  'snack',
+  'chips',
+  'pastel',
+  'pastelito',
+  'ponque',
+  'torta',
+];
+
+const COMMON_FRUIT_DERIVATIVE_STEMS = [
+  ...FRESH_PRODUCE_DERIVATIVE_STEMS,
+  'protector',
+  'jabon',
+  'shampoo',
+  'acondicionador',
+  'mascarilla',
+  'exfoliante',
+];
+
+const COMMON_HERB_DERIVATIVE_STEMS = [
+  'salsa',
+  'aderezo',
+  'pasta',
+  'polvo',
+  'sazonador',
+  'semilla',
+  'encurtido',
+];
+
 const PRODUCT_RULES: Record<string, ProductRule> = {
   arroz: { all: ['arroz'], excludeStems: ['galleta', 'achocolat', 'arroz con leche', 'bebida', 'sabor'] },
   pasta: { any: ['pasta'], excludeStems: ['pasta dental', 'pasta de tomate', 'salsa', 'crema'] },
@@ -295,15 +402,25 @@ const PRODUCT_RULES: Record<string, ProductRule> = {
   habichuela: { all: ['habichuela'], excludeStems: ['enlat'] },
   banano: { all: ['banano'], excludeTokens: ['te'], excludeStems: ['bebida', 'jugo', 'galleta', 'dulce', 'sabor', 'tea', 'infusion', 'aromatica', 'avena', 'cereal', 'granola', 'yogur', 'helado'] },
   naranja: { all: ['naranja'], excludeTokens: ['te'], excludeStems: ['bebida', 'jugo', 'galleta', 'dulce', 'sabor', 'tea', 'infusion', 'aromatica', 'avena', 'cereal', 'granola', 'yogur', 'helado'] },
-  limon: { all: ['limon'], excludeTokens: ['te'], excludeStems: ['panela', 'boka', 'refresc', 'bebida', 'jugo', 'galleta', 'limonada', 'agua', 'omi', 'ditopax', 'tableta', 'tablet', 'pastilla', 'blister', 'sal de frutas', 'fruta', 'alivio', 'lua', 'sobre', 'sobres', 'blanqueador', 'ultralimp', 'limpiador', 'platanito', 'platanitos', 'choclito', 'choclitos', 'papas', 'sexta', 'gaseosa', 'sprite', 'lima limon', 'zero', 'chip', 'chips', 'snack', 'sabor', 'tea', 'infusion', 'aromatica', 'avena', 'cereal', 'granola', 'yogur', 'helado'] },
+  limon: { all: ['limon'], excludeTokens: ['te'], excludeStems: ['panela', 'boka', 'refresc', 'bebida', 'jugo', 'galleta', 'limonada', 'agua', 'omi', 'ditopax', 'tableta', 'tablet', 'pastilla', 'blister', 'sal de frutas', 'alivio', 'lua', 'sobre', 'sobres', 'blanqueador', 'ultralimp', 'limpiador', 'platanito', 'platanitos', 'choclito', 'choclitos', 'papas', 'sexta', 'gaseosa', 'sprite', 'lima limon', 'zero', 'chip', 'chips', 'snack', 'sabor', 'tea', 'infusion', 'aromatica', 'avena', 'cereal', 'granola', 'yogur', 'helado'] },
   guayaba: { all: ['guayaba'], excludeTokens: ['te'], excludeStems: ['protector', 'bolsa protector', 'manzana', 'queso', 'pastel', 'pastelito', 'pan ', 'bebida', 'jugo', 'galleta', 'dulce', 'sabor', 'tea', 'infusion', 'aromatica', 'avena', 'cereal', 'granola', 'yogur', 'helado'] },
   mora: { all: ['mora'], excludeTokens: ['te'], excludeStems: ['bebida', 'jugo', 'refresc', 'fresky', 'hit', 'galleta', 'mermelada', 'caramelo', 'sabor', 'tea', 'infusion', 'aromatica', 'avena', 'cereal', 'granola', 'yogur', 'yogurt', 'yoghurt', 'yagur', 'yogo', 'helado', 'activox', 'jengibre', 'sobre', 'uva', 'fresa', 'arandano', 'plato', 'ceramica', 'microondas', 'lavavajillas', 'juego', 'jab ', 'jabon', 'suppra', 'care'] },
   maracuya: { all: ['maracuya'], excludeTokens: ['te'], excludeStems: ['agua', 'agua con gas', 'gas', 'omi', 'panela', 'refresc', 'bebida', 'beb hidrat', 'hidrat', 'hidralyte', 'suero', 'electrolit', 'jugo', 'galleta', 'dulce', 'sabor', 'tea', 'infusion', 'aromatica', 'yerbabuena', 'sobre', 'sobres', 'o1ne', 'night', 'nigth', 'caja', 'avena', 'cereal', 'granola', 'yogur', 'helado'] },
   'tomate de arbol': { all: ['tomate', 'arbol'], excludeTokens: ['te'], excludeStems: ['bebida', 'jugo', 'sabor', 'tea', 'infusion', 'aromatica'] },
+  manzana: { all: ['manzana'], excludeTokens: ['te'], excludeStems: COMMON_FRUIT_DERIVATIVE_STEMS },
+  pera: { all: ['pera'], excludeTokens: ['te'], excludeStems: COMMON_FRUIT_DERIVATIVE_STEMS },
+  papaya: { all: ['papaya'], excludeTokens: ['te'], excludeStems: COMMON_FRUIT_DERIVATIVE_STEMS },
+  mango: { all: ['mango'], excludeTokens: ['te'], excludeStems: [...COMMON_FRUIT_DERIVATIVE_STEMS, 'escoba', 'trapero', 'madera', 'cuchillo', 'sarten', 'cepillo', 'herramienta'] },
+  pina: { all: ['pina'], excludeTokens: ['te'], excludeStems: COMMON_FRUIT_DERIVATIVE_STEMS },
+  ajo: { all: ['ajo'], excludeStems: ['sal de ajo', 'pan de ajo', 'adobo', 'sazonador', 'salsa', 'pasta', 'polvo'] },
+  cilantro: { all: ['cilantro'], excludeStems: COMMON_HERB_DERIVATIVE_STEMS },
+  pepino: { all: ['pepino'], excludeStems: [...COMMON_HERB_DERIVATIVE_STEMS, 'jabon', 'shampoo', 'gel de', 'mascarilla', 'exfoliante'] },
+  lechuga: { all: ['lechuga'], excludeStems: ['semilla', 'jabon', 'gel de'] },
   'carne de res': { all: ['carne', 'res'], excludeStems: ['perro', 'gato', 'sabor'] },
   'carne de cerdo': { all: ['carne', 'cerdo'], excludeStems: ['perro', 'gato', 'sabor'] },
   pollo: { all: ['pollo'], excludeStems: ['pastel', 'pastelito', 'caldo', 'consome', 'sabor', 'sazonador', 'croqueta', 'pata de pollo', 'patas de pollo', 'salchichon', 'salchicha', 'embutido', 'jamon', 'mortadela', 'nugget', 'apanado', 'hamburguesa', 'marinad'] },
   pescado: { any: ['pescado', 'tilapia', 'trucha', 'mojarra', 'filete'], excludeStems: ['salsa', 'tomate', 'gatsy', 'purina', 'alimento para gato', 'gato', 'perro', 'cabeza', 'atun', 'sardina', 'caldo', 'sabor'] },
+  atun: { all: ['atun'], excludeStems: ['gatsy', 'purina', 'gato', 'perro', 'alimento para gato', 'alimento para perro'] },
   leche: { all: ['leche'], excludeStems: ['crema de leche', 'dulce de leche', 'leche condensada', 'leche de coco', 'chocolate', 'galleta', 'caramelo', 'flan', 'postre', 'avena', 'pan ', 'cereal', 'yogur', 'yogurt', 'yogo'] },
   'queso campesino': { all: ['queso', 'campesino'], excludeStems: ['arepa', 'sabor', 'snack'] },
   'aceite vegetal': { all: ['aceite'], excludeStems: ['atun', 'motor', 'motocicleta', 'automotr', 'lubric', 'masaje', 'esencial'] },
@@ -592,7 +709,7 @@ export class ComparisonService {
   }
 
   private getCandidateRanking(product: string, canonicalAll: CanonicalProduct[]): RankedProduct[] {
-    const targetTokens = this.toCanonicalTokens(product);
+    const targetTokens = this.getTargetMatchTokens(product);
     const relevant: Array<CanonicalProduct & { relevanceScore: number }> = canonicalAll
       .map((p) => {
         const targetedProduct = this.withNutritionTarget(p, product);
@@ -612,6 +729,22 @@ export class ComparisonService {
         }
         return (a.pricePerUnit ?? Number.MAX_SAFE_INTEGER) - (b.pricePerUnit ?? Number.MAX_SAFE_INTEGER);
       });
+  }
+
+  private getTargetMatchTokens(product: string): string[] {
+    const normalizedTarget = this.normalizeText(product);
+    const rule = PRODUCT_RULES[normalizedTarget];
+    const tokens = new Set(this.toCanonicalTokens(product));
+
+    rule?.all?.forEach((token) => {
+      this.toCanonicalTokens(token).forEach((expandedToken) => tokens.add(expandedToken));
+    });
+
+    rule?.any?.forEach((token) => {
+      this.toCanonicalTokens(token).forEach((expandedToken) => tokens.add(expandedToken));
+    });
+
+    return [...tokens].sort();
   }
 
   private pickBestCalorieValue(candidates: RankedProduct[]): RankedProduct | null {
@@ -1061,7 +1194,7 @@ export class ComparisonService {
 
     const coverage = intersection / targetSet.size;
     const jaccard = intersection / (targetSet.size + candidateSet.size - intersection);
-    const hasNonGrocerySignal = candidateTokens.some((token) => this.isNonGroceryToken(token));
+    const hasNonGrocerySignal = candidateTokens.some((token) => !targetSet.has(token) && this.isNonGroceryToken(token));
     const hasFoodAnchor = targetTokens.some((token) => FOOD_ANCHOR_TOKENS.has(token));
     const isEggQuery = targetTokens.some((token) => EGG_QUERY_TOKENS.has(token));
 
@@ -1138,6 +1271,10 @@ export class ComparisonService {
       return false;
     }
 
+    if (this.hasFreshProduceDerivativeNoise(targetNorm, name)) {
+      return false;
+    }
+
     if (this.hasBaseDerivativeNoise(targetNorm, tokens, name)) {
       return false;
     }
@@ -1185,6 +1322,14 @@ export class ComparisonService {
     }
 
     return false;
+  }
+
+  private hasFreshProduceDerivativeNoise(targetNorm: string, normalizedName: string): boolean {
+    if (!FRESH_PRODUCE_TARGETS.has(targetNorm)) {
+      return false;
+    }
+
+    return FRESH_PRODUCE_DERIVATIVE_STEMS.some((stem) => normalizedName.includes(stem));
   }
 
   private async getDefaultResearchBasket(): Promise<ResearchBasketItem[]> {
