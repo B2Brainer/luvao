@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useOptimizationContext } from '../../../services/optimizationContext'
+import { type OptimizationContextSource, useOptimizationContext } from '../../../services/optimizationContext'
 import {
   Area,
   AreaChart,
@@ -59,22 +59,29 @@ function tooltipNumber(value: number | string | ReadonlyArray<number | string> |
 
 export default function Statistics() {
   const [filters, setFilters] = useState<ResearchViewFilters>(defaultFilters)
+  const [sourceOverride, setSourceOverride] = useState<OptimizationContextSource | null>(null)
   const optimizationContext = useOptimizationContext()
+  const hasCustomContext = optimizationContext.source === 'custom-list' && optimizationContext.items.length > 0
+  const effectiveContext = sourceOverride === 'dane-basket' || !hasCustomContext
+    ? { source: 'dane-basket' as const, items: [], updatedAt: optimizationContext.updatedAt }
+    : optimizationContext
 
   const basketQuery = useResearchBasket()
   const basketItems = basketQuery.data ?? []
-  const activeSourceItems = optimizationContext.source === 'custom-list'
-    ? optimizationContext.items.map((item) => item.product)
+  const activeSourceItems = effectiveContext.source === 'custom-list'
+    ? effectiveContext.items.map((item) => item.product)
     : basketItems.map((item) => item.product)
   const productOptions = [...new Set(activeSourceItems)].sort((a, b) => a.localeCompare(b))
-  const activePriceQuery = filters.priceQuery || productOptions[0] || ''
+  const activePriceQuery = productOptions.includes(filters.priceQuery)
+    ? filters.priceQuery
+    : productOptions[0] || ''
   const queryFilters = {
     ...filters,
     priceQuery: activePriceQuery,
   }
 
-  const scenarioQuery = useResearchScenario(filters, optimizationContext)
-  const projectionQuery = useProjectionScenarios(filters, optimizationContext)
+  const scenarioQuery = useResearchScenario(filters, effectiveContext)
+  const projectionQuery = useProjectionScenarios(filters, effectiveContext)
   const priceStatsQuery = usePriceStats(queryFilters)
 
   const scenario = scenarioQuery.data ?? null
@@ -106,12 +113,13 @@ export default function Statistics() {
     }))
 
   const isRefreshing = scenarioQuery.isFetching || projectionQuery.isFetching || priceStatsQuery.isFetching
-  const activeSourceLabel = optimizationContext.source === 'custom-list'
-    ? `Lista personalizada activa (${optimizationContext.items.length} ítems)`
+  const activeSourceLabel = effectiveContext.source === 'custom-list'
+    ? `Lista personalizada activa (${effectiveContext.items.length} ítems)`
     : 'Canasta DANE como base'
-  const activeSourceDescription = optimizationContext.source === 'custom-list'
+  const activeSourceDescription = effectiveContext.source === 'custom-list'
     ? 'Esta vista toma como base la última lista personalizada optimizada y la reutiliza para recalcular costo, cobertura y sensibilidad.'
     : 'Esta vista toma como base la canasta DANE y recalcula costo, cobertura y sensibilidad con el optimizador investigativo.'
+  const shouldWarnShortCustomList = effectiveContext.source === 'custom-list' && effectiveContext.items.length < 3
 
   return (
     <div className="statistics-shell">
@@ -128,6 +136,33 @@ export default function Statistics() {
             <span>Filtros reactivos</span>
             <span>Actualizacion automatica cada 60 s</span>
           </div>
+
+          {hasCustomContext && (
+            <div className="statistics-chip-row source-switch-row">
+              <button
+                type="button"
+                className={`source-switch-button${effectiveContext.source === 'custom-list' ? ' active' : ''}`}
+                onClick={() => setSourceOverride('custom-list')}
+              >
+                Usar última lista personalizada
+              </button>
+              <button
+                type="button"
+                className={`source-switch-button${effectiveContext.source === 'dane-basket' ? ' active' : ''}`}
+                onClick={() => setSourceOverride('dane-basket')}
+              >
+                Usar canasta DANE
+              </button>
+            </div>
+          )}
+
+          {shouldWarnShortCustomList && (
+            <div className="statistics-chip-row">
+              <span className="statistics-chip alert">
+                Lista corta: con menos de 3 ítems los indicadores pueden sobrerrepresentar un solo producto.
+              </span>
+            </div>
+          )}
         </div>
 
         <div className="statistics-hero-card">

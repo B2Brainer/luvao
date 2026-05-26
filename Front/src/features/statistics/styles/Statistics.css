@@ -302,6 +302,28 @@
   color: #be123c;
 }
 
+.source-switch-row {
+  margin-top: 0.85rem;
+}
+
+.source-switch-button {
+  appearance: none;
+  border: 1px solid rgba(37, 99, 235, 0.12);
+  background: #eef3f9;
+  color: var(--navy-900);
+  border-radius: 999px;
+  padding: 0.38rem 0.82rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.source-switch-button.active {
+  background: #dbeafe;
+  color: #1d4ed8;
+  border-color: rgba(37, 99, 235, 0.22);
+}
+
 .stats-overview {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));

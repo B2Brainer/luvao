@@ -22,6 +22,9 @@ const DEFAULT_CONTEXT: OptimizationContext = {
   updatedAt: null,
 }
 
+let cachedRawValue: string | null = null
+let cachedSnapshot: OptimizationContext = DEFAULT_CONTEXT
+
 function sanitizeItems(items: OptimizationContextItem[] | undefined) {
   return (items ?? [])
     .map((item) => ({
@@ -52,14 +55,23 @@ export function getOptimizationContextSnapshot(): OptimizationContext {
   }
 
   const rawValue = window.localStorage.getItem(STORAGE_KEY)
+  if (rawValue === cachedRawValue) {
+    return cachedSnapshot
+  }
+
+  cachedRawValue = rawValue
+
   if (!rawValue) {
-    return DEFAULT_CONTEXT
+    cachedSnapshot = DEFAULT_CONTEXT
+    return cachedSnapshot
   }
 
   try {
-    return normalizeContext(JSON.parse(rawValue) as Partial<OptimizationContext>)
+    cachedSnapshot = normalizeContext(JSON.parse(rawValue) as Partial<OptimizationContext>)
+    return cachedSnapshot
   } catch {
-    return DEFAULT_CONTEXT
+    cachedSnapshot = DEFAULT_CONTEXT
+    return cachedSnapshot
   }
 }
 
