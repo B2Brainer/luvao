@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type CSSProperties } from 'react'
 import { type OptimizationContextSource, useOptimizationContext } from '../../../services/optimizationContext'
 import {
   Area,
@@ -6,7 +6,6 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
-  Legend,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -20,7 +19,6 @@ import {
 import {
   buildCategoryTargetRows,
   buildStoreSpendRows,
-  compactNumber,
   formatCalories,
   formatCurrency,
   formatPercent,
@@ -117,6 +115,49 @@ export default function Statistics() {
   )
 
   const categoryRows = buildCategoryTargetRows(scenario)
+  const totalCategoryTargetCalories = categoryRows.reduce((sum, row) => sum + row.targetCalories, 0)
+  const maxCategoryCalories = Math.max(
+    1,
+    ...categoryRows.map((row) => Math.max(row.targetCalories, row.plannedCalories, 0)),
+  )
+  const categoryBoardRows = categoryRows.map((row) => {
+    const targetCalories = Math.max(row.targetCalories, 0)
+    const plannedCalories = Math.max(row.plannedCalories, 0)
+    const compliance = targetCalories > 0
+      ? plannedCalories / targetCalories
+      : plannedCalories > 0
+        ? 1
+        : 0
+    const variance = plannedCalories - targetCalories
+    const targetWidth = targetCalories > 0 ? Math.max((targetCalories / maxCategoryCalories) * 100, 6) : 0
+    const plannedWidth = plannedCalories > 0 ? Math.max((plannedCalories / maxCategoryCalories) * 100, 6) : 0
+    const share = totalCategoryTargetCalories > 0 ? targetCalories / totalCategoryTargetCalories : 0
+    const status = targetCalories === 0 && plannedCalories === 0
+      ? 'idle'
+      : compliance < 0.9
+        ? 'low'
+        : compliance > 1.1
+          ? 'high'
+          : 'balanced'
+
+    return {
+      ...row,
+      compliance,
+      variance,
+      targetWidth,
+      plannedWidth,
+      share,
+      status,
+      visualProgress: Math.max(0, Math.min(compliance, 1)) * 100,
+      statusLabel: status === 'balanced'
+        ? 'OK'
+        : status === 'low'
+          ? 'Bajo'
+          : status === 'high'
+            ? 'Alto'
+            : 'Sin datos',
+    }
+  })
   const storeSpendRows = persistedStoreScenario
     ? buildStoreSpendRows(storeScenarioSource, {
         targetCalories: currentTargetCalories,
@@ -260,28 +301,67 @@ export default function Statistics() {
               <div className="statistics-card-head">
                 <div>
                   <h3>Cumplimiento calorico por categoria</h3>
-                  <p>Compara la distribucion objetivo DANE contra lo que realmente logra planificar la canasta activa.</p>
+                  <p>Objetivo y plan por categoria en una vista compacta.</p>
                 </div>
+                <span className="chart-caption">{categoryBoardRows.length} categorias</span>
               </div>
 
               {!categoryRows.length ? (
                 <div className="loading-block">Esperando datos del optimizador...</div>
               ) : (
-                <div className="chart-shell tall">
-                  <ResponsiveContainer width="100%" height={340}>
-                    <BarChart data={categoryRows} layout="vertical" margin={{ left: 10, right: 10 }}>
-                      <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="rgba(20,32,51,0.08)" />
-                      <XAxis type="number" stroke="#526173" tickFormatter={(value: number) => compactNumber(value)} />
-                      <YAxis type="category" dataKey="category" width={118} stroke="#526173" />
-                      <Tooltip
-                        formatter={(value, name) => [formatCalories(tooltipNumber(value)), name === 'targetCalories' ? 'Objetivo' : 'Planificado']}
-                        contentStyle={{ borderRadius: 12, borderColor: 'rgba(14,23,46,0.08)' }}
-                      />
-                      <Legend />
-                      <Bar dataKey="targetCalories" fill="#93c5fd" radius={[0, 8, 8, 0]} name="Objetivo" />
-                      <Bar dataKey="plannedCalories" fill="#22c55e" radius={[0, 8, 8, 0]} name="Planificado" />
-                    </BarChart>
-                  </ResponsiveContainer>
+                <div className="category-compliance-shell">
+                  <div className="category-compliance-grid">
+                    {categoryBoardRows.map((row) => {
+                      const orbStyle = {
+                        ['--category-progress' as string]: `${row.visualProgress}%`,
+                      } as CSSProperties
+
+                      return (
+                        <article className={`category-compliance-tile ${row.status}`} key={row.category}>
+                          <div className="category-tile-header">
+                            <h4>{row.category}</h4>
+                            <span className={`category-state-pill ${row.status}`}>{row.statusLabel}</span>
+                          </div>
+
+                          <div className="category-tile-body">
+                            <div className={`category-orb ${row.status}`} style={orbStyle}>
+                              <div className="category-orb-core">
+                                <strong>{formatPercent(row.compliance)}</strong>
+                                <span>cumplido</span>
+                              </div>
+                            </div>
+
+                            <div className="category-metric-stack">
+                              <div className="category-meter-row">
+                                <div className="category-meter-labels">
+                                  <span>Objetivo</span>
+                                  <strong>{formatCalories(row.targetCalories)}</strong>
+                                </div>
+                                <div className="category-meter-track target">
+                                  <div className="category-meter-fill" style={{ width: `${row.targetWidth}%` }} />
+                                </div>
+                              </div>
+
+                              <div className="category-meter-row">
+                                <div className="category-meter-labels">
+                                  <span>Planificado</span>
+                                  <strong>{formatCalories(row.plannedCalories)}</strong>
+                                </div>
+                                <div className={`category-meter-track planned ${row.status}`}>
+                                  <div className="category-meter-fill" style={{ width: `${row.plannedWidth}%` }} />
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="category-tile-footer">
+                            <span>{row.variance >= 0 ? '+' : '-'} {formatCalories(Math.abs(row.variance))}</span>
+                            <span>{formatPercent(row.share)}</span>
+                          </div>
+                        </article>
+                      )
+                    })}
+                  </div>
                 </div>
               )}
             </article>

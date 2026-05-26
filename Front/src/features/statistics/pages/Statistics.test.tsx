@@ -268,4 +268,47 @@ describe('Statistics page', () => {
       expect(screen.getByText('La gráfica se reescaló desde 66.000 kcal hasta 132.000 kcal.')).not.toBeNull()
     })
   })
+
+  it('muestra todas las categorias del backend en un tablero mas legible', () => {
+    useResearchScenarioMock.mockReturnValue({
+      data: {
+        ...customScenario,
+        categoryTargets: [
+          {
+            category: 'Cereales y harinas',
+            share: 0.28,
+            targetCalories: 18480,
+            plannedCalories: 15000,
+          },
+          {
+            category: 'Proteínas',
+            share: 0.17,
+            targetCalories: 11220,
+            plannedCalories: 9800,
+          },
+          {
+            category: 'Frutas',
+            share: 0.12,
+            targetCalories: 7920,
+            plannedCalories: 6200,
+          },
+          {
+            category: 'Verduras y hortalizas',
+            share: 0.14,
+            targetCalories: 9240,
+            plannedCalories: 4300,
+          },
+        ],
+      },
+      error: null,
+    } as any)
+
+    render(<Statistics />)
+
+    expect(screen.getByText('Cereales y harinas')).not.toBeNull()
+    expect(screen.getByText('Proteínas')).not.toBeNull()
+    expect(screen.getByText('Frutas')).not.toBeNull()
+    expect(screen.getByText('Verduras y hortalizas')).not.toBeNull()
+    expect(screen.getByText('4 categorias')).not.toBeNull()
+  })
 })
