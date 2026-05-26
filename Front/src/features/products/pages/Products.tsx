@@ -111,6 +111,22 @@ function calorieLabel(value: number | null | undefined) {
   return `${Math.round(value).toLocaleString('es-CO')} kcal`
 }
 
+function optimizeLineCalorieLabel(line: OptimizeLine) {
+  if (line.caloriesPerPackage) {
+    if (line.quantity > 1 && line.plannedCalories) {
+      return `${calorieLabel(line.caloriesPerPackage)}/paq · ${calorieLabel(line.plannedCalories)} total`
+    }
+
+    return `${calorieLabel(line.caloriesPerPackage)}/paq`
+  }
+
+  if (line.plannedCalories) {
+    return calorieLabel(line.plannedCalories)
+  }
+
+  return null
+}
+
 function errorMessage(error: unknown, fallback: string) {
   if (
     typeof error === 'object' &&
@@ -835,7 +851,7 @@ function Products() {
                         <small>
                           {line.quantity > 0 ? `${line.quantity} x ` : ''}
                           {line.selected?.storeName || 'sin coincidencia'} · {line.selected?.sourceName || 'sin opción disponible'}
-                          {line.plannedCalories ? ` · ${calorieLabel(line.plannedCalories)}` : ''}
+                          {optimizeLineCalorieLabel(line) ? ` · ${optimizeLineCalorieLabel(line)}` : ''}
                         </small>
                       </div>
                       <strong>{priceLabel(line.subtotal)}</strong>

@@ -74,6 +74,7 @@ describe('ComparisonService', () => {
   };
 
   const service = new ComparisonService(scrapedClient as never, {} as never);
+  const serviceInternals = service as any;
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -101,5 +102,28 @@ describe('ComparisonService', () => {
 
     expect(result.bestOverall?.sourceName).toBe(validName);
     expect(result.ranking.map((item) => item.sourceName)).toEqual([validName]);
+  });
+
+  it.each([
+    { query: 'arroz', name: 'Arroz Diana 450 g', expectedCalories: 495 },
+    { query: 'pasta', name: 'Pasta spaghetti 500 g', expectedCalories: 775 },
+    { query: 'avena', name: 'Avena en hojuelas 400 g', expectedCalories: 680 },
+    { query: 'frijol', name: 'Frijol cargamanto 500 g', expectedCalories: 635 },
+    { query: 'lentejas', name: 'Lentejas 500 g', expectedCalories: 580 },
+    { query: 'arveja seca', name: 'Arveja seca 500 g', expectedCalories: 590 },
+    { query: 'carne de res', name: 'Carne de res pulpa negra 500 g', expectedCalories: 1085 },
+    { query: 'carne de cerdo', name: 'Carne de cerdo lomo 500 g', expectedCalories: 1105 },
+    { query: 'pollo', name: 'Pechuga de pollo 500 g', expectedCalories: 825 },
+    { query: 'pescado', name: 'Filete de tilapia 500 g', expectedCalories: 640 },
+    { query: 'leche', name: 'Leche entera 1 l', expectedCalories: 610 },
+    { query: 'leche', name: 'Leche en polvo 400 g', expectedCalories: 1984 },
+    { query: 'queso campesino', name: 'Queso campesino fresco 500 g', expectedCalories: 1300 },
+  ])('estima kcal recalibradas para %s en %s', ({ query, name, expectedCalories }) => {
+    const presentation = serviceInternals.extractPresentation(name);
+    const normalizedName = serviceInternals.normalizeText(name);
+    const nutrition = serviceInternals.estimateNutrition(query, presentation, normalizedName);
+
+    expect(nutrition.calories).toBe(expectedCalories);
+    expect(nutrition.source).toBe('estimated');
   });
 });

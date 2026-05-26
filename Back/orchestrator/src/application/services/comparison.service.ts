@@ -65,6 +65,7 @@ type CalorieReference = {
   caloriesPerKg?: number;
   caloriesPerL?: number;
   caloriesPerUnit?: number;
+  caloriesPerKgDense?: number;
 };
 
 type RankedProduct = CanonicalProduct & {
@@ -450,19 +451,19 @@ const CATEGORY_CALORIE_SHARE: Record<string, number> = {
 };
 
 const CALORIE_REFERENCES: Record<string, CalorieReference> = {
-  arroz: { caloriesPerKg: 3600 },
-  pasta: { caloriesPerKg: 3500 },
-  'harina de trigo': { caloriesPerKg: 3640 },
-  'harina de maiz': { caloriesPerKg: 3650 },
+  arroz: { caloriesPerKg: 1100 },
+  pasta: { caloriesPerKg: 1550 },
+  'harina de trigo': { caloriesPerKg: 2100 },
+  'harina de maiz': { caloriesPerKg: 2200 },
   pan: { caloriesPerKg: 2670 },
   'galletas de sal': { caloriesPerKg: 4500 },
-  avena: { caloriesPerKg: 3890 },
+  avena: { caloriesPerKg: 1700 },
   papa: { caloriesPerKg: 770 },
   yuca: { caloriesPerKg: 1600 },
   'platano verde': { caloriesPerKg: 1220, caloriesPerUnit: 218 },
-  frijol: { caloriesPerKg: 3370 },
-  lentejas: { caloriesPerKg: 3530 },
-  'arveja seca': { caloriesPerKg: 3400 },
+  frijol: { caloriesPerKg: 1270 },
+  lentejas: { caloriesPerKg: 1160 },
+  'arveja seca': { caloriesPerKg: 1180 },
   tomate: { caloriesPerKg: 180 },
   'cebolla cabezona': { caloriesPerKg: 400 },
   'cebolla larga': { caloriesPerKg: 320 },
@@ -475,14 +476,14 @@ const CALORIE_REFERENCES: Record<string, CalorieReference> = {
   mora: { caloriesPerKg: 430 },
   maracuya: { caloriesPerKg: 970, caloriesPerUnit: 17 },
   'tomate de arbol': { caloriesPerKg: 480, caloriesPerUnit: 40 },
-  'carne de res': { caloriesPerKg: 2500 },
-  'carne de cerdo': { caloriesPerKg: 2420 },
-  pollo: { caloriesPerKg: 2390 },
-  pescado: { caloriesPerKg: 2000 },
+  'carne de res': { caloriesPerKg: 2170 },
+  'carne de cerdo': { caloriesPerKg: 2210 },
+  pollo: { caloriesPerKg: 1650 },
+  pescado: { caloriesPerKg: 1280 },
   huevos: { caloriesPerKg: 1550, caloriesPerUnit: 70 },
   huevo: { caloriesPerKg: 1550, caloriesPerUnit: 70 },
-  leche: { caloriesPerKg: 4960, caloriesPerL: 610 },
-  'queso campesino': { caloriesPerKg: 2800 },
+  leche: { caloriesPerKg: 610, caloriesPerL: 610, caloriesPerKgDense: 4960 },
+  'queso campesino': { caloriesPerKg: 2600 },
   'aceite vegetal': { caloriesPerKg: 8840, caloriesPerL: 8133 },
   aceite: { caloriesPerKg: 8840, caloriesPerL: 8133 },
   margarina: { caloriesPerKg: 7200 },
@@ -1132,6 +1133,10 @@ export class ComparisonService {
   ): number | null {
     if ((productKey === 'huevos' || productKey === 'huevo') && baseUnit === 'und') {
       return normalizedName.includes('codorniz') ? 14 : reference.caloriesPerUnit ?? null;
+    }
+
+    if (productKey === 'leche' && baseUnit === 'kg' && normalizedName.includes('polvo')) {
+      return reference.caloriesPerKgDense ?? reference.caloriesPerKg ?? null;
     }
 
     if (baseUnit === 'kg') {
