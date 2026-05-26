@@ -66,6 +66,8 @@ const probableUserCases: MatchAuditCase[] = [
   { query: 'cilantro', validName: 'Cilantro fresco manojo', invalidName: 'Salsa de cilantro 200 g' },
   { query: 'pepino', validName: 'Pepino cohombro x kg', invalidName: 'Jabon de pepino 90 g' },
   { query: 'atun', validName: 'Atun en agua 160 g', invalidName: 'Alimento para gato sabor atun 85 g' },
+  { query: 'tomate', validName: 'Tomate chonto x kg', invalidName: 'Semilla Tomate 10 Gr Anasac' },
+  { query: 'pepino', validName: 'Pepino cohombro x kg', invalidName: 'Semilla Pepino Cohombro 5 Gr Anasac' },
 ];
 
 describe('ComparisonService', () => {
@@ -327,7 +329,38 @@ describe('ComparisonService', () => {
         storeName: 'Exito',
         resolvedItems: 1,
         requestedItems: 1,
-        totalEstimated: 54600,
+        totalEstimated: 15600,
+      }),
+    ])
+  })
+
+  it('descarta tambien semillas de vivero para otros vegetales frescos en el optimizador', async () => {
+    scrapedClient.searchByFilters.mockResolvedValue([
+      makeCandidate('tomate-carulla-semilla', 'tomate', 'Semilla Tomate 10 Gr Anasac', 10900, 'Carulla'),
+      makeCandidate('tomate-exito-fresco', 'tomate', 'Tomate chonto x kg', 4200, 'Exito'),
+    ])
+
+    const result = await service.optimizeShoppingList(
+      [
+        { product: 'tomate', quantity: 1 },
+      ],
+      { periodDays: 30, targetCalories: 180, restrictedStore: 'Carulla' },
+    )
+
+    expect(result.restrictedStore).toBe('Carulla')
+    expect(result.lines).toEqual([
+      expect.objectContaining({
+        requested: 'tomate',
+        quantity: 0,
+        selected: null,
+        subtotal: null,
+      }),
+    ])
+    expect(result.storeScenarios).toEqual([
+      expect.objectContaining({
+        storeName: 'Exito',
+        resolvedItems: 1,
+        totalEstimated: 8400,
       }),
     ])
   })

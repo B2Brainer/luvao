@@ -369,6 +369,13 @@ const FRESH_PRODUCE_TARGETS = new Set([
 ]);
 
 const FRESH_PRODUCE_DERIVATIVE_STEMS = [
+  'semilla',
+  'siembra',
+  'germin',
+  'vivero',
+  'jardin',
+  'huerta',
+  'anasac',
   'gelatina',
   'natilla',
   'flan',
