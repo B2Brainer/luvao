@@ -15,7 +15,6 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
-import KpiGrid from '../components/KpiGrid'
 import ResearchFilters from '../components/ResearchFilters'
 import {
   usePriceStats,
@@ -28,12 +27,9 @@ import {
   buildCoverageRows,
   buildStoreSpendRows,
   compactNumber,
-  computeSavingsPotential,
   formatCalories,
   formatCurrency,
   formatPercent,
-  formatTimeframe,
-  toPeriodDays,
 } from '../research.utils'
 import type { ResearchViewFilters } from '../types'
 import '../styles/Statistics.css'
@@ -85,8 +81,6 @@ export default function Statistics() {
   const priceStatsQuery = usePriceStats(queryFilters)
 
   const scenario = scenarioQuery.data ?? null
-  const periodDays = toPeriodDays(filters.timeUnit, filters.durationValue)
-  const targetCalories = Math.round(filters.householdSize * filters.dailyCaloriesPerPerson * periodDays)
   const storeOptions = [
     ...new Set([
       ...(scenario ? Object.keys(scenario.estimatedByStore) : []),
@@ -98,7 +92,6 @@ export default function Statistics() {
   const categoryRows = buildCategoryTargetRows(scenario)
   const coverageRows = buildCoverageRows(scenario?.lines ?? [])
   const storeSpendRows = buildStoreSpendRows(scenario)
-  const savings = computeSavingsPotential(scenario?.lines ?? [])
   const projectionRows = projectionQuery.data
     .filter((item) => item.scenario)
     .map((item) => ({
@@ -112,86 +105,10 @@ export default function Statistics() {
         : 0,
     }))
 
-  const isRefreshing = scenarioQuery.isFetching || projectionQuery.isFetching || priceStatsQuery.isFetching
-  const activeSourceLabel = effectiveContext.source === 'custom-list'
-    ? `Lista personalizada activa (${effectiveContext.items.length} ítems)`
-    : 'Canasta DANE como base'
-  const activeSourceDescription = effectiveContext.source === 'custom-list'
-    ? 'Esta vista toma como base la última lista personalizada optimizada y la reutiliza para recalcular costo, cobertura y sensibilidad.'
-    : 'Esta vista toma como base la canasta DANE y recalcula costo, cobertura y sensibilidad con el optimizador investigativo.'
   const shouldWarnShortCustomList = effectiveContext.source === 'custom-list' && effectiveContext.items.length < 3
 
   return (
     <div className="statistics-shell">
-      <section className="statistics-hero">
-        <div className="statistics-hero-copy">
-          <span className="statistics-eyebrow">Investigacion</span>
-          <h1>Analiza gasto, cobertura y sensibilidad del optimizador para la canasta familiar.</h1>
-          <p>
-            {activeSourceDescription}
-          </p>
-
-          <div className="statistics-meta-row">
-            <span>{activeSourceLabel}</span>
-            <span>Filtros reactivos</span>
-            <span>Actualizacion automatica cada 60 s</span>
-          </div>
-
-          {hasCustomContext && (
-            <div className="statistics-chip-row source-switch-row">
-              <button
-                type="button"
-                className={`source-switch-button${effectiveContext.source === 'custom-list' ? ' active' : ''}`}
-                onClick={() => setSourceOverride('custom-list')}
-              >
-                Usar última lista personalizada
-              </button>
-              <button
-                type="button"
-                className={`source-switch-button${effectiveContext.source === 'dane-basket' ? ' active' : ''}`}
-                onClick={() => setSourceOverride('dane-basket')}
-              >
-                Usar canasta DANE
-              </button>
-            </div>
-          )}
-
-          {shouldWarnShortCustomList && (
-            <div className="statistics-chip-row">
-              <span className="statistics-chip alert">
-                Lista corta: con menos de 3 ítems los indicadores pueden sobrerrepresentar un solo producto.
-              </span>
-            </div>
-          )}
-        </div>
-
-        <div className="statistics-hero-card">
-          <div className="hero-metric">
-            <span>Escenario activo</span>
-            <strong>{filters.householdSize} personas</strong>
-          </div>
-
-          <div className="hero-metric">
-            <span>Horizonte</span>
-            <strong>{formatTimeframe(filters.timeUnit, filters.durationValue)}</strong>
-          </div>
-
-          <div className="hero-metric">
-            <span>Meta calorica</span>
-            <strong>{formatCalories(targetCalories)}</strong>
-          </div>
-
-          <div className="hero-metric">
-            <span>Registros observados</span>
-            <strong>{compactNumber(priceStatsQuery.data?.totalRecords ?? 0)}</strong>
-          </div>
-
-          <span className={`refresh-pill${isRefreshing ? ' active' : ''}`}>
-            {isRefreshing ? 'Refrescando datos...' : 'Datos sincronizados'}
-          </span>
-        </div>
-      </section>
-
       <section className="statistics-layout">
         <aside className="statistics-sidebar">
           <ResearchFilters
@@ -206,18 +123,43 @@ export default function Statistics() {
         </aside>
 
         <div className="statistics-content">
+          {(hasCustomContext || shouldWarnShortCustomList) && (
+            <div className="statistics-toolbar">
+              {hasCustomContext && (
+                <div className="statistics-chip-row">
+                  <button
+                    type="button"
+                    className={`source-switch-button${effectiveContext.source === 'custom-list' ? ' active' : ''}`}
+                    onClick={() => setSourceOverride('custom-list')}
+                  >
+                    Usar última lista personalizada
+                  </button>
+                  <button
+                    type="button"
+                    className={`source-switch-button${effectiveContext.source === 'dane-basket' ? ' active' : ''}`}
+                    onClick={() => setSourceOverride('dane-basket')}
+                  >
+                    Usar canasta DANE
+                  </button>
+                </div>
+              )}
+
+              {shouldWarnShortCustomList && (
+                <div className="statistics-chip-row">
+                  <span className="statistics-chip alert">
+                    Lista corta: con menos de 3 ítems los indicadores pueden sobrerrepresentar un solo producto.
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
+
           {scenarioQuery.error && (
             <div className="statistics-card error-card">
               <h3>No fue posible cargar el escenario principal.</h3>
               <p>{scenarioQuery.error instanceof Error ? scenarioQuery.error.message : 'Error desconocido.'}</p>
             </div>
           )}
-
-          <KpiGrid
-            filters={filters}
-            scenario={scenario}
-            savings={savings}
-          />
 
           <div className="statistics-charts-grid">
             <article className="statistics-card statistics-card-wide">

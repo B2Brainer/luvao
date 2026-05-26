@@ -130,6 +130,11 @@
   gap: 1rem;
 }
 
+.statistics-toolbar {
+  display: grid;
+  gap: 0.75rem;
+}
+
 .research-filter-card h2,
 .methodology-card h2,
 .statistics-card h3 {
