@@ -68,6 +68,44 @@ describe('statistics research utils', () => {
     ])
   })
 
+  it('rescales store rows from an optimizer snapshot when target calories change', () => {
+    const response: OptimizeResponse = {
+      mode: 'calorie-plan',
+      periodDays: 30,
+      targetCalories: 66000,
+      plannedCalories: 61200,
+      requestedItems: 2,
+      resolvedItems: 2,
+      unresolvedItems: [],
+      totalEstimated: 52000,
+      estimatedByStore: {
+        Exito: 32000,
+      },
+      storeScenarios: [
+        {
+          storeName: 'Exito',
+          totalEstimated: 52000,
+          resolvedItems: 2,
+          requestedItems: 2,
+          unresolvedItems: [],
+          coverage: 1,
+          plannedCalories: 61200,
+          targetCalories: 66000,
+        },
+      ],
+      lines: [],
+    }
+
+    expect(buildStoreSpendRows(response, { targetCalories: 132000, periodDays: 60 })).toEqual([
+      expect.objectContaining({
+        name: 'Exito',
+        value: 104000,
+        plannedCalories: 122400,
+        targetCalories: 132000,
+      }),
+    ])
+  })
+
   it('falls back to the legacy estimatedByStore payload when storeScenarios are missing', () => {
     const response: OptimizeResponse = {
       requestedItems: 2,

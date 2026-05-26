@@ -131,15 +131,46 @@ export function buildCategoryTargetRows(response: OptimizeResponse | null | unde
   }))
 }
 
-export function buildStoreSpendRows(response: OptimizeResponse | null | undefined) {
+function resolveStoreScenarioScale(
+  response: OptimizeResponse,
+  adjustments?: { targetCalories?: number | null; periodDays?: number | null },
+) {
+  if (!adjustments) {
+    return 1
+  }
+
+  const requestedTargetCalories = adjustments.targetCalories ?? null
+  const baseTargetCalories = response.targetCalories ?? response.storeScenarios?.[0]?.targetCalories ?? null
+
+  if (requestedTargetCalories && baseTargetCalories && baseTargetCalories > 0) {
+    return requestedTargetCalories / baseTargetCalories
+  }
+
+  const requestedPeriodDays = adjustments.periodDays ?? null
+  const basePeriodDays = response.periodDays ?? null
+
+  if (requestedPeriodDays && basePeriodDays && basePeriodDays > 0) {
+    return requestedPeriodDays / basePeriodDays
+  }
+
+  return 1
+}
+
+export function buildStoreSpendRows(
+  response: OptimizeResponse | null | undefined,
+  adjustments?: { targetCalories?: number | null; periodDays?: number | null },
+) {
   if (!response) {
     return []
   }
 
-   if (response.storeScenarios?.length) {
+  const scale = resolveStoreScenarioScale(response, adjustments)
+  const scaledTargetCalories = adjustments?.targetCalories ?? response.targetCalories ?? 0
+
+  if (response.storeScenarios?.length) {
     return response.storeScenarios.map((item, index) => ({
       name: item.storeName,
-      value: item.totalEstimated,
+      value: Math.round(item.totalEstimated * scale),
       coverage: item.coverage,
       resolvedItems: item.resolvedItems,
       requestedItems: item.requestedItems,
@@ -150,8 +181,8 @@ export function buildStoreSpendRows(response: OptimizeResponse | null | undefine
         : item.unresolvedItems.length <= 2
           ? item.unresolvedItems.join(', ')
           : `${item.unresolvedItems.slice(0, 2).join(', ')} +${item.unresolvedItems.length - 2}`,
-      plannedCalories: item.plannedCalories,
-      targetCalories: item.targetCalories,
+      plannedCalories: Math.round(item.plannedCalories * scale),
+      targetCalories: scaledTargetCalories || item.targetCalories,
       fill: storePalette[index % storePalette.length],
     }))
   }
@@ -160,15 +191,15 @@ export function buildStoreSpendRows(response: OptimizeResponse | null | undefine
     .sort((left, right) => right[1] - left[1])
     .map(([name, value], index) => ({
       name,
-      value,
+      value: Math.round(value * scale),
       coverage: 1,
       resolvedItems: response.resolvedItems,
       requestedItems: response.requestedItems,
       unresolvedItems: response.unresolvedItems,
       missingCount: response.unresolvedItems.length,
       missingLabel: response.unresolvedItems.length === 0 ? 'Cobertura completa' : response.unresolvedItems.join(', '),
-      plannedCalories: response.plannedCalories ?? 0,
-      targetCalories: response.targetCalories ?? 0,
+      plannedCalories: Math.round((response.plannedCalories ?? 0) * scale),
+      targetCalories: scaledTargetCalories || (response.targetCalories ?? 0),
       fill: storePalette[index % storePalette.length],
     }))
 }

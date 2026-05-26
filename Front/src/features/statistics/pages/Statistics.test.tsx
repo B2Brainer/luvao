@@ -238,7 +238,34 @@ describe('Statistics page', () => {
 
     expect(screen.getByText('Exito')).not.toBeNull()
     expect(screen.queryByText('Olimpica')).toBeNull()
-    expect(screen.getByText('Usa la última optimización guardada en la home para que este bloque refleje exactamente ese cálculo.')).not.toBeNull()
+    expect(screen.getByText('Usa la última optimización guardada en la home como base y la reescala cuando cambias personas, tiempo o kcal.')).not.toBeNull()
     expect(screen.getByText('La última optimización principal quedó restringida a Olimpica.')).not.toBeNull()
+  })
+
+  it('reescala la gráfica por tienda guardada cuando cambian los parámetros de investigación', async () => {
+    useOptimizationContextMock.mockReturnValue({
+      source: 'custom-list',
+      items: [
+        { product: 'arroz', quantity: 1 },
+        { product: 'pollo', quantity: 1 },
+      ],
+      restrictedStore: 'Olimpica',
+      lastOptimization: persistedScenario,
+      updatedAt: '2026-05-26T10:06:00.000Z',
+    })
+
+    render(<Statistics />)
+
+    expect(screen.getByText((content) => content.includes('212.000'))).not.toBeNull()
+    expect(screen.getByText('La gráfica se reescaló desde 66.000 kcal hasta 264.000 kcal.')).not.toBeNull()
+
+    fireEvent.change(screen.getByLabelText('Numero de personas'), {
+      target: { value: '2' },
+    })
+
+    await waitFor(() => {
+      expect(screen.getByText((content) => content.includes('106.000'))).not.toBeNull()
+      expect(screen.getByText('La gráfica se reescaló desde 66.000 kcal hasta 132.000 kcal.')).not.toBeNull()
+    })
   })
 })

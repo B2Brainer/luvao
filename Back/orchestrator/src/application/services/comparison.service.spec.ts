@@ -297,4 +297,38 @@ describe('ComparisonService', () => {
       expect.objectContaining({ storeName: 'Olimpica', coverage: 0.5, unresolvedItems: ['pollo'], totalEstimated: 5600 }),
     ])
   })
+
+  it('descarta semillas no alimentarias al restringir habichuela a una tienda', async () => {
+    scrapedClient.searchByFilters.mockResolvedValue([
+      makeCandidate('habichuela-carulla-semilla', 'habichuela', 'Semilla Habichuela 10 Gr Anasac', 11900, 'Carulla'),
+      makeCandidate('habichuela-exito-fresca', 'habichuela', 'Habichuela fresca x kg', 7800, 'Exito'),
+    ])
+
+    const result = await service.optimizeShoppingList(
+      [
+        { product: 'habichuela', quantity: 1 },
+      ],
+      { periodDays: 30, targetCalories: 2310, restrictedStore: 'Carulla' },
+    )
+
+    expect(result.restrictedStore).toBe('Carulla')
+    expect(result.resolvedItems).toBe(0)
+    expect(result.totalEstimated).toBe(0)
+    expect(result.lines).toEqual([
+      expect.objectContaining({
+        requested: 'habichuela',
+        quantity: 0,
+        selected: null,
+        subtotal: null,
+      }),
+    ])
+    expect(result.storeScenarios).toEqual([
+      expect.objectContaining({
+        storeName: 'Exito',
+        resolvedItems: 1,
+        requestedItems: 1,
+        totalEstimated: 54600,
+      }),
+    ])
+  })
 });

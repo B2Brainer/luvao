@@ -24,6 +24,7 @@ import {
   formatCalories,
   formatCurrency,
   formatPercent,
+  toPeriodDays,
 } from '../research.utils'
 import type { ResearchViewFilters } from '../types'
 import '../styles/Statistics.css'
@@ -99,6 +100,8 @@ export default function Statistics() {
 
   const scenarioQuery = useResearchScenario(filters, effectiveContext)
   const projectionQuery = useProjectionScenarios(filters, effectiveContext)
+  const currentPeriodDays = toPeriodDays(filters.timeUnit, filters.durationValue)
+  const currentTargetCalories = Math.round(filters.householdSize * filters.dailyCaloriesPerPerson * currentPeriodDays)
 
   const scenario = scenarioQuery.data ?? null
   const persistedStoreScenario = hasStoreComparison(effectiveContext.lastOptimization)
@@ -106,9 +109,20 @@ export default function Statistics() {
     : null
   const storeScenarioSource = persistedStoreScenario ?? scenario
   const snapshotTimeLabel = formatSnapshotTime(persistedStoreScenario?.computedAt ?? effectiveContext.updatedAt)
+  const persistedBaseTargetCalories = persistedStoreScenario?.targetCalories ?? persistedStoreScenario?.storeScenarios?.[0]?.targetCalories ?? null
+  const isScaledPersistedScenario = Boolean(
+    persistedStoreScenario &&
+    persistedBaseTargetCalories &&
+    Math.round(persistedBaseTargetCalories) !== currentTargetCalories,
+  )
 
   const categoryRows = buildCategoryTargetRows(scenario)
-  const storeSpendRows = buildStoreSpendRows(storeScenarioSource)
+  const storeSpendRows = persistedStoreScenario
+    ? buildStoreSpendRows(storeScenarioSource, {
+        targetCalories: currentTargetCalories,
+        periodDays: currentPeriodDays,
+      })
+    : buildStoreSpendRows(storeScenarioSource)
   const projectionRows = projectionQuery.data
     .filter((item) => item.scenario)
     .map((item) => ({
@@ -278,11 +292,17 @@ export default function Statistics() {
                   <h3>Costo si compras todo en una sola tienda</h3>
                   <p>
                     {persistedStoreScenario
-                      ? 'Usa la última optimización guardada en la home para que este bloque refleje exactamente ese cálculo.'
+                      ? 'Usa la última optimización guardada en la home como base y la reescala cuando cambias personas, tiempo o kcal.'
                       : 'Recalcula la misma canasta activa limitando la seleccion a un solo retail y mostrando cobertura real.'}
                   </p>
                 </div>
-                <span className="chart-caption">{persistedStoreScenario ? 'Resultado del optimizador' : `${storeSpendRows.length} tiendas`}</span>
+                <span className="chart-caption">
+                  {persistedStoreScenario
+                    ? isScaledPersistedScenario
+                      ? 'Resultado reescalado'
+                      : 'Resultado del optimizador'
+                    : `${storeSpendRows.length} tiendas`}
+                </span>
               </div>
 
               {!storeSpendRows.length ? (
@@ -310,9 +330,11 @@ export default function Statistics() {
                           : 'La última optimización principal pudo combinar tiendas y esta vista conserva esa misma corrida.'}
                       </span>
                       <span>
-                        {snapshotTimeLabel
-                          ? `Último cálculo guardado: ${snapshotTimeLabel}.`
-                          : 'Para recalcular este bloque desde home, vuelve a ejecutar el optimizador principal.'}
+                        {isScaledPersistedScenario
+                          ? `La gráfica se reescaló desde ${formatCalories(persistedBaseTargetCalories)} hasta ${formatCalories(currentTargetCalories)}.`
+                          : snapshotTimeLabel
+                            ? `Último cálculo guardado: ${snapshotTimeLabel}.`
+                            : 'Para recalcular este bloque desde home, vuelve a ejecutar el optimizador principal.'}
                       </span>
                     </div>
                   )}

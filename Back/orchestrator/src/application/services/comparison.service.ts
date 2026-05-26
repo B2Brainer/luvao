@@ -451,7 +451,7 @@ const PRODUCT_RULES: Record<string, ProductRule> = {
   'cebolla cabezona': { all: ['cebolla'], excludeStems: ['cebolla larga'] },
   'cebolla larga': { all: ['cebolla', 'larga'], excludeStems: ['pasta', 'salsa', 'polvo', 'sazonador'] },
   zanahoria: { all: ['zanahoria'], excludeStems: ['arveja', 'bebida', 'jugo', 'galleta', 'dulce', 'sabor'] },
-  habichuela: { all: ['habichuela'], excludeStems: ['enlat'] },
+  habichuela: { all: ['habichuela'], excludeStems: ['enlat', 'semilla'] },
   banano: { all: ['banano'], excludeTokens: ['te'], excludeStems: ['bebida', 'jugo', 'galleta', 'dulce', 'sabor', 'tea', 'infusion', 'aromatica', 'avena', 'cereal', 'granola', 'yogur', 'helado'] },
   naranja: { all: ['naranja'], excludeTokens: ['te'], excludeStems: ['bebida', 'jugo', 'galleta', 'dulce', 'sabor', 'tea', 'infusion', 'aromatica', 'avena', 'cereal', 'granola', 'yogur', 'helado'] },
   limon: { all: ['limon'], excludeTokens: ['te'], excludeStems: ['panela', 'boka', 'refresc', 'bebida', 'jugo', 'galleta', 'limonada', 'agua', 'omi', 'ditopax', 'tableta', 'tablet', 'pastilla', 'blister', 'sal de frutas', 'alivio', 'lua', 'sobre', 'sobres', 'blanqueador', 'ultralimp', 'limpiador', 'platanito', 'platanitos', 'choclito', 'choclitos', 'papas', 'sexta', 'gaseosa', 'sprite', 'lima limon', 'zero', 'chip', 'chips', 'snack', 'sabor', 'tea', 'infusion', 'aromatica', 'avena', 'cereal', 'granola', 'yogur', 'helado'] },
