@@ -1,10 +1,24 @@
 import axios from 'axios'
 
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL ||
-  (typeof window !== 'undefined' && window.location.hostname
-    ? `${window.location.protocol}//${window.location.hostname}:3006/api`
-    : 'http://localhost:3006/api')
+const LOCALHOST_HOSTNAMES = new Set(['localhost', '127.0.0.1'])
+
+const getApiBaseUrl = () => {
+  if (import.meta.env.VITE_API_BASE_URL) {
+    return import.meta.env.VITE_API_BASE_URL
+  }
+
+  if (typeof window === 'undefined') {
+    return 'http://localhost:3006/api'
+  }
+
+  if (LOCALHOST_HOSTNAMES.has(window.location.hostname)) {
+    return `${window.location.protocol}//${window.location.hostname}:3006/api`
+  }
+
+  return `${window.location.origin}/api`
+}
+
+const API_BASE_URL = getApiBaseUrl()
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
