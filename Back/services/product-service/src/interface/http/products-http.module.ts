@@ -9,6 +9,7 @@ import { GetAllProductsUseCase } from '../../application/use-cases/get-all-produ
 import { UpdateProductUseCase } from '../../application/use-cases/update-product.usecase';
 import { DeleteProductUseCase } from '../../application/use-cases/delete-product.usecase';
 import { GetProductNamesUseCase } from '../../application/use-cases/get-product-names.usecase';
+import { GetDaneFamilyBasketUseCase } from '../../application/use-cases/get-dane-family-basket.usecase';
 import { SearchProductsByNameUseCase } from '../../application/use-cases/search-products-by-name.usecase';
 import { PrismaService } from '../../infrastructure/prisma/prisma.service';
 import { PrismaModule } from '../../infrastructure/prisma/prisma.module';
@@ -55,6 +56,10 @@ const usePrisma = !!process.env.DATABASE_URL;
       provide: GetProductNamesUseCase,
       useFactory: (repo) => new GetProductNamesUseCase(repo),
       inject: [PRODUCT_REPOSITORY],
+    },
+    {
+      provide: GetDaneFamilyBasketUseCase,
+      useFactory: () => new GetDaneFamilyBasketUseCase(),
     },
     {
       provide: SearchProductsByNameUseCase,

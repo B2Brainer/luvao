@@ -14,6 +14,13 @@ export class ProductClient {
     return response.data;
   }
 
+  async getDaneFamilyBasket() {
+    const response = await this.http.axiosRef.get(
+      `${SERVICES.PRODUCT}/products/research/dane-basket`
+    );
+    return response.data;
+  }
+
   async createProduct(data: any) {
     const response = await this.http.axiosRef.post(
       `${SERVICES.PRODUCT}/products`,

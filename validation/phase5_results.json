@@ -1,0 +1,197 @@
+{
+  "generated_at": "2026-05-05 21:53:55",
+  "technical": {
+    "checks": {
+      "stores_available": {
+        "pass": true,
+        "message": "Stores disponibles: 3"
+      },
+      "products_available": {
+        "pass": true,
+        "message": "Productos canónicos disponibles: 2"
+      },
+      "compare_has_results": {
+        "pass": true,
+        "message": "Comparación arroz devolvió 30 candidatos"
+      },
+      "optimize_consistency": {
+        "pass": true,
+        "message": "Total estimado 10090 coincide con suma de subtotales 10090"
+      },
+      "d1_persisted_data": {
+        "pass": true,
+        "message": "Productos persistidos para D1: 27"
+      },
+      "job_integration_success": {
+        "pass": true,
+        "message": "Job terminó en estado success"
+      },
+      "job_processed_all_stores": {
+        "pass": true,
+        "message": "Tiendas procesadas por job: ['d1', 'exito', 'olimpica']"
+      }
+    },
+    "timings_ms": {
+      "stores": 59.8,
+      "products": 5.17,
+      "compare_arroz": 19.64,
+      "optimize_list": 38.48,
+      "d1_filters": 7.52,
+      "refresh_job": 13.31
+    },
+    "job_status": {
+      "id": "774d66e5-72e7-44bd-bc51-f5f1820c9ceb",
+      "status": "success",
+      "created_at": "2026-05-06T02:53:55.854835+00:00",
+      "updated_at": "2026-05-06T02:54:21.818573+00:00",
+      "payload": {},
+      "result": {
+        "status": "success",
+        "scraped_products": 76,
+        "products_sent": 67,
+        "stores_processed": [
+          "olimpica",
+          "exito",
+          "d1"
+        ],
+        "queries_processed": [
+          "arroz",
+          "aceite"
+        ]
+      },
+      "poll_elapsed_ms": 11.5,
+      "http_status": 200
+    }
+  },
+  "latency": {
+    "samples_ms": {
+      "compare": [
+        16.13,
+        18.51,
+        18.21,
+        12.75,
+        9.16
+      ],
+      "optimize": [
+        16.47,
+        15.18,
+        14.44
+      ],
+      "search": [
+        11.83,
+        10.11,
+        9.93
+      ]
+    },
+    "summary": {
+      "compare": {
+        "min_ms": 9.16,
+        "avg_ms": 14.95,
+        "max_ms": 18.51
+      },
+      "optimize": {
+        "min_ms": 14.44,
+        "avg_ms": 15.36,
+        "max_ms": 16.47
+      },
+      "search": {
+        "min_ms": 9.93,
+        "avg_ms": 10.62,
+        "max_ms": 11.83
+      }
+    },
+    "checks": {
+      "compare_under_1500ms_avg": {
+        "pass": true,
+        "message": "Promedio compare 14.95 ms"
+      },
+      "optimize_under_1500ms_avg": {
+        "pass": true,
+        "message": "Promedio optimize 15.36 ms"
+      },
+      "search_under_800ms_avg": {
+        "pass": true,
+        "message": "Promedio search 10.62 ms"
+      }
+    }
+  },
+  "precision": {
+    "evaluated": [
+      {
+        "product": "arroz",
+        "expected_store": "d1",
+        "expected_price": 1550,
+        "actual_store": "d1",
+        "actual_price": 1550,
+        "match": true
+      },
+      {
+        "product": "aceite",
+        "expected_store": "d1",
+        "expected_price": 6990,
+        "actual_store": "d1",
+        "actual_price": 6990,
+        "match": true
+      }
+    ],
+    "matches": 2,
+    "unresolved": 0,
+    "considered": 2,
+    "accuracy_percent": 100.0,
+    "check": {
+      "pass": true,
+      "message": "Precisión de tienda óptima: 100.00% sobre 2 productos evaluados"
+    }
+  },
+  "usability": {
+    "items": [
+      {
+        "check": "Pantalla principal orientada a usuario",
+        "pass": true,
+        "evidence": "Products.tsx reemplaza el panel técnico por comparación + lista optimizada"
+      },
+      {
+        "check": "Búsqueda de producto visible",
+        "pass": true,
+        "evidence": "Input principal con catálogo sugerido"
+      },
+      {
+        "check": "Comparación por tienda visible",
+        "pass": true,
+        "evidence": "Tabla con bestByStore y ranking"
+      },
+      {
+        "check": "Estados de carga de scraping en tiempo real",
+        "pass": true,
+        "evidence": "Polling contra /scraping-jobs/:jobId con barra de progreso"
+      },
+      {
+        "check": "Filtros avanzados",
+        "pass": true,
+        "evidence": "Filtros por tienda, precio máximo y orden"
+      },
+      {
+        "check": "Métricas visuales",
+        "pass": true,
+        "evidence": "Best price, spread, worst price y candidates"
+      },
+      {
+        "check": "Lista optimizada con cantidades",
+        "pass": true,
+        "evidence": "Chips con cantidad y totales"
+      },
+      {
+        "check": "Retroalimentación de error",
+        "pass": true,
+        "evidence": "Mensajes visibles para compare/optimize/scrape"
+      },
+      {
+        "check": "Responsive básico",
+        "pass": true,
+        "evidence": "Breakpoints en Products.css y Header.css"
+      }
+    ],
+    "passed": 9,
+    "total": 9
+  }
+}

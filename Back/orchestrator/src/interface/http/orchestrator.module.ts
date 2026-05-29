@@ -6,6 +6,7 @@ import { AuthService } from '../../application/services/auth.service';
 import { DashboardService } from '../../application/services/dashboard.service';
 import { ProductService } from '../../application/services/product.service'; 
 import { CrawlerService } from '../../application/services/crawler.service'; 
+import { ComparisonService } from '../../application/services/comparison.service';
 
 // Clients
 import { UsersClient } from '../../application/clients/users.client';
@@ -23,6 +24,7 @@ import { CrawlerClient } from '../../application/clients/crawler.client';
     DashboardService,  
     ProductService,    
     CrawlerService,    
+    ComparisonService,
 
     // Clients
     UsersClient,

@@ -2,8 +2,8 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Auth } from './features/auth/pages/AuthPage'
 import Products from './features/products/pages/Products'
-import ProductDetail from './features/products/pages/ProductDetail'
 import Header from './features/products/components/Header'
+import Statistics from './features/statistics/pages/Statistics'
 import './App.css'
 
 function App() {
@@ -32,10 +32,10 @@ function App() {
         />
 
         <Route
-          path="/products/:id"
+          path="/statistics"
           element={
             <MainLayout>
-              <ProductDetail />
+              <Statistics />
             </MainLayout>
           }
         />

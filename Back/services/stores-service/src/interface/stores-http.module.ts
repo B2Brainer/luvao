@@ -5,6 +5,7 @@ import { STORE_REPOSITORY } from '../application/tokens';
 import { PrismaStoreRepository } from '../infrastructure/persistence/prisma-store.repository';
 import { PrismaService } from '../infrastructure/prisma/prisma.service';
 import { PrismaModule } from '../infrastructure/prisma/prisma.module';
+import { DefaultStoresSeeder } from '../infrastructure/seed/default-stores.seeder';
 
 import { CreateStoreUseCase } from '../application/use-cases/create-store.usecase';
 import { UpdateStoreUseCase } from '../application/use-cases/update-store.usecase';
@@ -63,6 +64,7 @@ import { GetAllStoreNamesUseCase } from '../application/use-cases/get-all-store-
       useFactory: (repo) => new GetAllStoreNamesUseCase(repo),
       inject: [STORE_REPOSITORY],
     },
+    DefaultStoresSeeder,
   ],
 })
 export class StoresHttpModule {}

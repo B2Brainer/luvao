@@ -1,53 +1,54 @@
-# Luvao
+# luvao
+Plataforma web que permite a los usuarios consultar, buscar y comparar productos de distintos supermercados en una sola aplicación. El objetivo es ofrecer una experiencia centralizada, donde las personas puedan encontrar precios actualizados, disponibilidad y tiendas de origen sin tener que revisar cada supermercado por separado.
 
-Plataforma web para comparar precios de supermercados, centralizar información dispersa y apoyar la toma de decisiones de compra con búsquedas, comparaciones y optimización de listas.
+## Despliegue rapido
 
-## 1. Introducción
+La salida mas rapida hoy es desplegar el frontend en Vercel y exponer temporalmente el backend local mediante el `orchestrator`.
 
-El proyecto aborda la dificultad de comparar productos entre supermercados diferentes cuando la información está repartida en múltiples sitios web. La solución centraliza datos de precios, disponibilidad y origen del producto en una sola plataforma.
+### Frontend en Vercel
 
-## 2. Problema
+Configura el proyecto con raiz `Front`, comando de build `npm run build` y output `dist`.
 
-La pregunta central es cómo construir una plataforma web que, apoyada en scraping y microservicios, permita comparar precios de supermercados en Barranquilla y optimizar listas de compra de forma automática.
+Debes definir la variable de entorno:
 
-## 3. Objetivos
+```bash
+VITE_API_BASE_URL=https://tu-backend-publico/api
+```
 
-El objetivo general es diseñar e implementar una aplicación para comparar precios de productos en supermercados y facilitar decisiones de compra más informadas.
+Si no defines esa variable, el frontend usara:
 
-Entre los objetivos específicos están recolectar datos desde múltiples fuentes, integrarlos en una estructura común, permitir búsquedas y comparaciones, y validar el comportamiento del sistema.
+- `http://localhost:3006/api` cuando corra en localhost
+- `${window.location.origin}/api` cuando corra en un dominio publicado detras de un proxy
 
-## 4. Arquitectura lógica
+### Backend temporal para demo
 
-La solución se organiza en un frontend, un orquestador y varios servicios de dominio. El frontend recibe las solicitudes del usuario, el orquestador coordina las consultas, y los servicios gestionan productos, tiendas, usuarios y datos scrapeados.
+Levanta el backend localmente desde `Back/` y expone el puerto `3006` del `orchestrator` con un tunel HTTPS.
 
-El crawler obtiene información desde supermercados externos, la normaliza y la envía al servicio de datos scrapeados para su almacenamiento y consulta posterior.
+Ejemplo con Cloudflare Tunnel o ngrok:
 
-## 5. Arquitectura física
+```bash
+docker compose -f docker-compose.dev.yml up --build
+```
 
-La plataforma se despliega en contenedores independientes. Incluye una base de datos por servicio, un servicio de colas para ejecutar trabajos de scraping y un worker separado para procesar esas tareas de forma asíncrona.
+El `orchestrator` publica la API bajo el prefijo `/api`, por ejemplo:
 
-El usuario accede desde el navegador, el frontend consume el orquestador y este distribuye las peticiones al resto de servicios.
+```text
+https://tu-backend-publico/api/docs
+https://tu-backend-publico/api/orchestrator/dashboard
+```
 
-## 6. Prototipo
+### CORS del Orchestrator
 
-El prototipo permite iniciar sesión, registrar usuarios, buscar productos, comparar precios entre supermercados y optimizar listas de compra. También incluye una vista de estadísticas para analizar cobertura, costo y distribución del gasto.
+El `orchestrator` ahora acepta por defecto origenes locales (`localhost` y `127.0.0.1`) y puede aceptar dominios publicos mediante la variable:
 
-## 7. Recolección de datos
+```bash
+ALLOWED_ORIGINS=https://tu-app.vercel.app,https://tu-dominio.com
+```
 
-El módulo de scraping consulta supermercados como Éxito, Olímpica, D1 y Carulla. El crawler se apoya en peticiones HTTP asincrónicas, Selenium cuando es necesario, y una cola de trabajos para actualizar catálogos sin bloquear el flujo principal del sistema.
+Tambien soporta comodines simples, por ejemplo:
 
-## 8. Base de datos e integración
+```bash
+ALLOWED_ORIGINS=https://*.vercel.app
+```
 
-Cada servicio mantiene su propia persistencia relacional. El sistema maneja entidades como usuarios, productos, tiendas y productos scrapeados, con un proceso de normalización que asocia los datos extraídos con la lista canónica de productos.
-
-## 9. Interfaz de usuario
-
-La interfaz se divide en un módulo operativo para búsqueda, comparación y optimización, y un módulo analítico para estadísticas y escenarios de consumo. El contexto de optimización se reutiliza para mantener coherencia entre ambas vistas.
-
-## 10. Resultados
-
-El sistema permitió validar la extracción automática de datos, su almacenamiento estructurado y la generación de recomendaciones de compra. En las pruebas reportadas, la estrategia óptima distribuyó compras entre varias tiendas para reducir el costo total y mejorar la cobertura.
-
-## 11. Conclusiones
-
-La plataforma demuestra que es viable integrar scraping, procesamiento de datos y microservicios para construir una herramienta útil de comparación de precios. Como trabajo futuro, se pueden ampliar los supermercados integrados y mejorar la homologación de productos.
+Esto es util para pruebas previas, aunque para produccion conviene usar dominios explicitos.

@@ -51,13 +51,18 @@ def prisma(pg_container):
 
 # ---------- Limpieza entre pruebas ----------
 @pytest.fixture(autouse=True)
-async def _truncate_between_tests(prisma: Prisma):
+def _truncate_between_tests(request):
     """
-    Limpia las tablas entre pruebas para aislamiento.
-    (Usa el nombre exacto de tus tablas según migraciones)
+    Limpia las tablas solo en pruebas de integración que realmente usan DB.
+    Las pruebas unitarias del scraper no necesitan levantar Postgres.
     """
-    # BEGIN opcional si quieres asegurar transacción; TRUNCATE hace COMMIT implícito en PG
-    await prisma.execute_raw('TRUNCATE TABLE "Product" CASCADE;')
-    await prisma.execute_raw('TRUNCATE TABLE "Store" CASCADE;')
+    if "integration" not in str(request.node.fspath):
+        yield
+        return
+
+    prisma: Prisma = request.getfixturevalue("prisma")
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(prisma.execute_raw('TRUNCATE TABLE "Product" CASCADE;'))
+    loop.run_until_complete(prisma.execute_raw('TRUNCATE TABLE "Store" CASCADE;'))
     yield
     # Nada que hacer después; las pruebas ya quedan limpias para la siguiente

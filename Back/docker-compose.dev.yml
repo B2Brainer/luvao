@@ -15,10 +15,10 @@ services:
       - backend-net
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d storedb"]
-      interval: 2s
-      timeout: 2s
-      retries: 10
-      start_period: 5s
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
 
   # Base de datos para products
   pg_product:
@@ -36,10 +36,10 @@ services:
       - backend-net
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d productdb"]
-      interval: 2s
-      timeout: 2s
-      retries: 10
-      start_period: 5s
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
 
   # Base de datos para users
   pg_user:
@@ -57,10 +57,10 @@ services:
       - backend-net
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d userdb"]
-      interval: 2s
-      timeout: 2s
-      retries: 10
-      start_period: 5s
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
 
   # Base de datos scraped
   pg_scraped:
@@ -78,10 +78,25 @@ services:
       - backend-net
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d scrapeddb"]
-      interval: 2s
-      timeout: 2s
-      retries: 10
-      start_period: 5s
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+
+  # Cola de mensajería para jobs de scraping
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
+    networks:
+      - backend-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
 
   # stores
   stores-service:
@@ -98,6 +113,12 @@ services:
       - "3001:3001"
     command: >
       sh -c "npx prisma db push && npm run start:dev"
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch('http://localhost:3001/stores').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))\""]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
     networks:
       - backend-net
 
@@ -116,6 +137,12 @@ services:
       - "3002:3002"
     command: >
       sh -c "npx prisma db push && npm run start:dev"
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch('http://localhost:3002/products').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))\""]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
     networks:
       - backend-net
 
@@ -134,6 +161,12 @@ services:
       - "3003:3003"
     command: >
       sh -c "npx prisma db push && npm run start:dev"
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch('http://localhost:3003/users').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))\""]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
     networks:
       - backend-net
 
@@ -152,6 +185,12 @@ services:
       - "3005:3005"
     command: >
       sh -c "npx prisma db push && npm run start:dev"
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch('http://localhost:3005/searched-products').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))\""]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
     networks:
       - backend-net
 
@@ -164,16 +203,45 @@ services:
     env_file:
       - ./services/crawler-service/.env
     depends_on:
+      redis:
+        condition: service_healthy
       stores-service:
-        condition: service_started
+        condition: service_healthy
       product-service:
-        condition: service_started
+        condition: service_healthy
       scraped-service:
-        condition: service_started
+        condition: service_healthy
     ports:
       - "3004:3004"
     command: >
       sh -c "uvicorn src.app:app --host 0.0.0.0 --port 3004 --reload"
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:3004/crawler/health', timeout=3)\""]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 20s
+    networks:
+      - backend-net
+
+  crawler-worker:
+    build:
+      context: ./services/crawler-service
+      dockerfile: Dockerfile
+    container_name: crawler-worker
+    env_file:
+      - ./services/crawler-service/.env
+    depends_on:
+      redis:
+        condition: service_healthy
+      stores-service:
+        condition: service_healthy
+      product-service:
+        condition: service_healthy
+      scraped-service:
+        condition: service_healthy
+    command: >
+      sh -c "python -m src.worker"
     networks:
       - backend-net
 
@@ -185,11 +253,18 @@ services:
     env_file:
       - ./orchestrator/.env
     depends_on:
-      - user-service
-      - product-service
-      - stores-service
-      - scraped-service
-      - crawler-service
+      user-service:
+        condition: service_healthy
+      product-service:
+        condition: service_healthy
+      stores-service:
+        condition: service_healthy
+      scraped-service:
+        condition: service_healthy
+      crawler-service:
+        condition: service_healthy
+      crawler-worker:
+        condition: service_started
     ports:
       - "3006:3006"
     command: >
@@ -206,4 +281,3 @@ volumes:
 networks:
   backend-net:
     driver: bridge
-

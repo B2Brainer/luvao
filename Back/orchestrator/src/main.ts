@@ -5,8 +5,51 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './infrastructure/http/http-exceptions.filter';
 
+const LOCAL_ORIGIN_PATTERNS = [
+  /^http:\/\/localhost:\d+$/,
+  /^http:\/\/127\.0\.0\.1:\d+$/,
+];
+
+function parseAllowedOrigins(value?: string): string[] {
+  if (!value) {
+    return [];
+  }
+
+  return value
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+}
+
+function escapeRegex(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function matchesAllowedOrigin(origin: string, allowedOrigins: string[]): boolean {
+  if (LOCAL_ORIGIN_PATTERNS.some((pattern) => pattern.test(origin))) {
+    return true;
+  }
+
+  return allowedOrigins.some((allowedOrigin) => {
+    if (allowedOrigin === origin) {
+      return true;
+    }
+
+    if (!allowedOrigin.includes('*')) {
+      return false;
+    }
+
+    const wildcardPattern = new RegExp(
+      `^${escapeRegex(allowedOrigin).replace(/\\\*/g, '.*')}$`,
+    );
+
+    return wildcardPattern.test(origin);
+  });
+}
+
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  const allowedOrigins = parseAllowedOrigins(process.env.ALLOWED_ORIGINS);
 
   // ✅ Prefijo global
   app.setGlobalPrefix('api');
@@ -23,8 +66,15 @@ async function bootstrap() {
 
   // ✅ CORS para frontend
   app.enableCors({
-    origin: ['http://localhost:3000', 'http://localhost:5173'],
-    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    origin: (origin, callback) => {
+      if (!origin || matchesAllowedOrigin(origin, allowedOrigins)) {
+        callback(null, true);
+        return;
+      }
+
+      callback(new Error(`Origin not allowed by CORS: ${origin}`), false);
+    },
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     credentials: true,
   });
 
@@ -44,6 +94,9 @@ async function bootstrap() {
   
   console.log(`🚀 Orchestrator running on: http://localhost:${port}/api`);
   console.log(`📚 API Documentation: http://localhost:${port}/api/docs`);
+  console.log(
+    `🌐 Allowed CORS origins: ${allowedOrigins.length > 0 ? allowedOrigins.join(', ') : 'localhost only'}`,
+  );
 }
 
 bootstrap().catch((err) => {
